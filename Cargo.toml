@@ -1,0 +1,18 @@
+[package]
+name = "planes-of-booty"
+version = "0.1.0"
+authors = ["barsoosayque <shtoshich@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ggez = "0.5.1"
+ggez-goodies = "0.5.0"
+specs = "0.16.1"
+specs-derive = "0.4.1"
+warmy = "0.13.0"
+
+euclid = { version = "0.20.11", features = ["mint"] }
+anyhow = "1.0.31"
+log = "0.4.8"
+fern = { version = "0.6.0", features = ["colored"] }
+chrono = "0.4.11"
