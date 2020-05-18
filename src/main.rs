@@ -6,6 +6,8 @@ use log::info;
 mod assets;
 mod ecs;
 mod game;
+mod math;
+mod entity;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};

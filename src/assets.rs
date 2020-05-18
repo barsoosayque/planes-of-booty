@@ -1,38 +1,45 @@
-use ggez::{graphics::Image, Context};
+use ggez::graphics::{FilterMode, Image};
 use log::debug;
-use warmy::{Load, Loaded};
+use std::any::Any;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
-pub type Assets = warmy::Store<Context, Key>;
-type Storage = warmy::Storage<Context, Key>;
+pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Key(std::path::PathBuf);
+impl AssetManager {
+    pub fn new() -> Self {
+        AssetManager(BTreeMap::new())
+    }
 
-impl<P> std::convert::From<P> for Key where P: AsRef<std::path::Path> {
-    fn from(path: P) -> Self {
-        Key(path.as_ref().to_owned())
+    pub fn get<A: Asset + 'static>(
+        &mut self,
+        key: &str,
+        ctx: &mut A::Context,
+    ) -> anyhow::Result<Arc<A>> {
+        if let Some(asset) = self.0.get(key) {
+            Ok(asset.to_owned().downcast::<A>().unwrap())
+        } else {
+            let asset = Arc::new(A::load(key, ctx)?);
+            self.0.insert(key.to_owned(), asset.clone());
+            Ok(asset)
+        }
     }
 }
 
-impl warmy::key::Key for Key {
-    fn prepare_key(self, _root: &std::path::Path) -> Self {
-        Self(std::path::Path::new("/").join(self.0))
-    }
+pub trait Asset: Sized + Send + Sync {
+    type Context;
+    fn load(key: &str, ctx: &mut Self::Context) -> anyhow::Result<Self>;
 }
 
 #[derive(Debug, Clone)]
 pub struct ImageAsset(pub Image);
 
-impl Load<Context, Key> for ImageAsset {
-    type Error = anyhow::Error;
-
-    fn load(
-        key: Key,
-        _storage: &mut Storage,
-        ctx: &mut Context,
-    ) -> Result<Loaded<Self, Key>, Self::Error> {
-        debug!("Loading image asset {:?}", key.0);
-        let img = Image::new(ctx, key.0)?;
+impl Asset for ImageAsset {
+    type Context = ggez::Context;
+    fn load(key: &str, ctx: &mut Self::Context) -> anyhow::Result<Self> {
+        debug!("Loading image asset {:?}", key);
+        let mut img = Image::new(ctx, key)?;
+        img.set_filter(FilterMode::Linear);
         Ok(ImageAsset(img).into())
     }
 }

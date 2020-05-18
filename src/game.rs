@@ -1,5 +1,5 @@
 use crate::assets::*;
-use crate::ecs::resource::*;
+use crate::ecs::{component::*, resource::*, system::*, tag};
 use ggez::event::EventHandler;
 use ggez::timer;
 use ggez::{graphics, Context, GameResult};
@@ -7,36 +7,47 @@ use specs::prelude::*;
 
 pub struct Game {
     world: World,
-    assets: Assets,
+    dispatcher: Dispatcher<'static, 'static>,
+    assets: AssetManager,
 }
 
 impl Game {
-    pub fn new(_ctx: &mut Context) -> Game {
+    pub fn new(ctx: &mut Context) -> Game {
         let mut world = World::new();
-        let mut dispatcher = DispatcherBuilder::new().build();
+        let mut dispatcher = DispatcherBuilder::new()
+            .with(MovementSystem, "movement_system", &[])
+            .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
+        world.register::<tag::Player>();
+        world.register::<Movement>();
+        world.register::<Transform>();
+        world.register::<DirectionalSprite>();
         dispatcher.setup(&mut world);
 
-        Game {
-            world,
-            assets: Assets::new(warmy::StoreOpt::default()).unwrap(),
-        }
+        let mut assets = AssetManager::new();
+
+        crate::entity::player(&mut world, ctx, &mut assets);
+
+        Game { world, dispatcher, assets }
     }
 }
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        // update delta
-        let mut delta = self.world.write_resource::<DeltaTime>();
-        delta.0 = timer::delta(ctx);
+        {
+            // update delta time
+            let mut delta = self.world.write_resource::<DeltaTime>();
+            delta.0 = timer::delta(ctx);
+        }
+        self.dispatcher.dispatch(&self.world);
+        self.world.maintain();
 
-        self.assets.get::<ImageAsset>(&"sprites/ship-north.png".into(), ctx).unwrap();
-        self.assets.sync(ctx);
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
+        SpriteRenderSystem(ctx).run_now(&self.world);
         graphics::present(ctx)
     }
 }

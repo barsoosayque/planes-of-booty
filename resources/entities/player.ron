@@ -1,0 +1,17 @@
+EntityDef(
+    components: [
+        DirectionalSprite(
+            east_asset: "/sprites/ship-east.png",   
+            north_asset: "/sprites/ship-north.png",   
+            south_asset: "/sprites/ship-south.png",   
+            west_asset: "/sprites/ship-west.png",   
+            width: 80,
+            height: 80
+        ),
+        Transform(
+            pos: (0, 0),
+            rotation: 0
+        )
+        Player,
+    ]
+)
