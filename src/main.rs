@@ -10,6 +10,7 @@ mod ecs;
 mod entity;
 mod game;
 mod math;
+mod ui;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};
