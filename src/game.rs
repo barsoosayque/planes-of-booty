@@ -1,3 +1,4 @@
+use crate::entity;
 use crate::assets::*;
 use crate::ecs::{component::*, resource::*, system::*, tag};
 use crate::ui::{self, system::ImGuiSystem};
@@ -30,7 +31,7 @@ impl Game {
         let mut assets = AssetManager::new();
         let imgui = ImGuiSystem::new(ctx);
 
-        crate::entity::player(&mut world, ctx, &mut assets);
+        entity::spawn_player(&mut world, ctx, &mut assets);
 
         Game {
             world,

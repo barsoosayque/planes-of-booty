@@ -12,6 +12,29 @@ fn parse_entity_def(name: &str, data: &str) -> Result<EntityDef> {
     })
 }
 
+fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
+    let mut fn_gen = Function::new("spawn");
+    fn_gen
+        .arg("id", "&str")
+        .arg("world", "&mut specs::World")
+        .arg("ctx", "&mut ggez::Context")
+        .arg("assets", "&mut crate::assets::AssetManager");
+    fn_gen.ret("specs::Entity");
+    fn_gen.vis("pub");
+    fn_gen.allow("dead_code");
+
+    fn_gen.line("match id {");
+    for def in defs {
+        fn_gen.line(&format!(
+            "\"{}\" => spawn_{}(world, ctx, assets),",
+            def.name, def.name
+        ));
+    }
+    fn_gen.line("_ => panic!(\"Unknown id for spawning an entity: {}\", id),");
+    fn_gen.line("}");
+    fn_gen
+}
+
 fn generate_spawn_fn(def: &EntityDef) -> Function {
     let mut fn_gen = Function::new(&format!("spawn_{}", def.name));
     fn_gen
@@ -20,6 +43,7 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
         .arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
+    fn_gen.allow("dead_code");
 
     fn_gen.line("use specs::{WorldExt,world::Builder};");
     fn_gen.line("world.create_entity()");
@@ -27,7 +51,6 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
         fn_gen.line(format!(".with(tag::{})", tag));
     }
     for (name, contents) in &def.components {
-        // use struct definition syntax for struct initialization
         let component = if contents.default && contents.parts.len() == 0 {
             format!("component::{}::default()", name)
         } else {
@@ -37,11 +60,11 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
                     .parts
                     .iter()
                     .map(|(part_name, part_value)| match part_value {
-                        PartValue::Str(value) => format!("{}: {}", part_name, value),
-                        PartValue::Num(value) => format!("{}: {}f32", part_name, value),
-                        PartValue::Bool(value) => format!("{}: {}", part_name, value),
+                        PartValue::Str(value) => format!("{}:{}", part_name, value),
+                        PartValue::Num(value) => format!("{}:{}f32", part_name, value),
+                        PartValue::Bool(value) => format!("{}:{}", part_name, value),
                         PartValue::Image(path) => format!(
-                            "{}: assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()",
+                            "{}:assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()",
                             part_name, path
                         ),
                     })
@@ -49,7 +72,7 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
                     .join(","),
             );
             if contents.default {
-                body.push_str(&format!(", ..component::{}::default()", name));
+                body.push_str(&format!(",..component::{}::default()", name));
             }
             body.push_str("}");
             body
@@ -95,6 +118,15 @@ fn main() {
 
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let mut scope = Scope::new();
+    {
+        let names: Vec<String> = defs.iter().map(|def| format!("\"{}\"", def.name)).collect();
+        scope.raw(&format!(
+            "#[allow(dead_code)] pub const IDS: [&'static str; {}] = [{}];",
+            names.len(),
+            names.join(",")
+        ));
+    }
+    scope.push_fn(generate_generic_spawn_fn(&defs));
     for def in &defs {
         scope.push_fn(generate_spawn_fn(&def));
     }
