@@ -13,22 +13,13 @@ pub struct Transform {
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Movement {
-    pub acc: Vec2f,
-    pub direction: Direction,
-}
+    pub velocity: Vec2f,
+    pub acceleration: Vec2f,
+    pub target_acceleration_normal: Vec2f,
 
-#[derive(Debug)]
-pub enum Direction {
-    North,
-    East,
-    South,
-    West,
-}
-
-impl Default for Direction {
-    fn default() -> Self {
-        Self::North
-    }
+    pub max_velocity: f32,
+    pub acceleration_flat: f32,
+    pub acceleration_change_throttle: f32,
 }
 
 #[derive(Debug, Component)]

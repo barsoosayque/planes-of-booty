@@ -16,6 +16,7 @@ impl Game {
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
             .with(MovementSystem, "movement_system", &[])
+            .with(InputsSystem, "inputs_system", &[])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.register::<tag::Player>();
@@ -28,7 +29,11 @@ impl Game {
 
         crate::entity::player(&mut world, ctx, &mut assets);
 
-        Game { world, dispatcher, assets }
+        Game {
+            world,
+            dispatcher,
+            assets,
+        }
     }
 }
 
@@ -39,6 +44,12 @@ impl EventHandler for Game {
             let mut delta = self.world.write_resource::<DeltaTime>();
             delta.0 = timer::delta(ctx);
         }
+        {
+            // update inputs
+            let mut inputs = self.world.write_resource::<Inputs>();
+            inputs.pressed_keys = ggez::input::keyboard::pressed_keys(ctx).to_owned();
+        }
+
         self.dispatcher.dispatch(&self.world);
         self.world.maintain();
 

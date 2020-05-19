@@ -1,13 +1,15 @@
 use anyhow::Result;
-use ggez::event;
-use ggez::ContextBuilder;
+use ggez::{
+    conf::{NumSamples, WindowSetup},
+    event, ContextBuilder,
+};
 use log::info;
 
 mod assets;
 mod ecs;
+mod entity;
 mod game;
 mod math;
-mod entity;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};
@@ -43,6 +45,12 @@ fn run() -> Result<()> {
     );
 
     let (mut ctx, mut event_loop) = ContextBuilder::new("planes-of-booty", "")
+        .window_setup(WindowSetup {
+            title: "Planes of Booty".to_owned(),
+            samples: NumSamples::Four,
+            vsync: true,
+            ..WindowSetup::default()
+        })
         .add_resource_path("resources")
         .build()?;
 
