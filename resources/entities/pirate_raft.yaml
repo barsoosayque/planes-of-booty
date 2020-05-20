@@ -13,7 +13,7 @@ components:
         radius: 200.0
     FollowTarget:
         keep_distance: 80.0
-        follow_distance: 300.0
+        follow_distance: 500.0
     Target:
         __default: true
     Transform:

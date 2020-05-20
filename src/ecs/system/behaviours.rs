@@ -99,12 +99,13 @@ impl<'a> System<'a> for FollowTargetSystem {
                 } else {
                     let safe_delta = pos_delta.try_normalize().unwrap_or_default()
                         * (distance - follow.keep_distance);
-                    let safe_distance = safe_delta.length();
                     let brake_factor = if distance >= follow.keep_distance {
                         // slowly approach
-                        ((safe_distance - movement.velocity.length()) / movement.acceleration_flat)
-                            .max(0.0)
-                            .min(1.0)
+                        if (pos_delta - movement.velocity * 0.33).length() < follow.keep_distance {
+                            0.0
+                        } else {
+                            1.0
+                        }
                     } else {
                         // get out as fast as possible
                         1.0
