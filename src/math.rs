@@ -1,11 +1,30 @@
-use euclid::{Point2D, UnknownUnit, Vector2D};
+use euclid::{Point2D, UnknownUnit, Vector2D, Size2D};
 
+pub type Size2f = Size2D<f32, UnknownUnit>;
 pub type Vec2f = Vector2D<f32, UnknownUnit>;
 pub type Point2f = Point2D<f32, UnknownUnit>;
+#[derive(Default, Debug)]
+pub struct Circle2f {
+    pub position: Point2f,
+    pub radius: f32
+}
+impl Circle2f {
+    pub fn new(position: Point2f, radius: f32) -> Self {
+        Self { position, radius } 
+    }
+
+    pub fn contains(&self, p: Point2f) -> bool {
+        p.distance_to(self.position) < self.radius
+    }
+}
 
 #[inline]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + t * (b - a)
+}
+#[inline]
+pub fn dir_bool(b: bool) -> f32 {
+    if b { 1.0 } else { -1.0 }
 }
 
 #[derive(Debug)]

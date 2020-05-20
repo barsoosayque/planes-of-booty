@@ -13,4 +13,6 @@ components:
         __default: true
     Transform:
         __default: true
+    Faction:
+        id: { faction: "Good" }
 tags: ["Player"]

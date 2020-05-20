@@ -1,7 +1,39 @@
 use crate::assets::*;
 use crate::math::Vec2f;
-use specs::{Component, VecStorage};
+use specs::{Entity, Component, VecStorage};
 use std::sync::Arc;
+use std::collections::HashSet as Set;
+
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct Target {
+    pub target: Option<Entity>,
+}
+
+#[derive(Default, Component)]
+#[storage(VecStorage)]
+pub struct FollowTarget {
+    pub keep_distance: f32,
+    pub follow_distance: f32
+}
+
+#[derive(Default, Component)]
+#[storage(VecStorage)]
+pub struct SearchForTarget {
+    pub from_factions: Set<FactionId>,
+    pub radius: f32
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct Faction {
+    pub id: FactionId
+}
+
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub enum FactionId {
+    Pirates, Good
+}
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]

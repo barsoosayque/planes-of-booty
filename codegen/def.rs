@@ -1,5 +1,5 @@
 use serde::{
-    de::{self, MapAccess, Visitor},
+    de::{self, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer,
 };
 use std::collections::HashMap as Map;
@@ -10,6 +10,7 @@ pub struct EntityDef {
     #[serde(skip)]
     pub name: String,
     pub components: Map<String, ComponentDef>,
+    #[serde(default)]
     pub tags: Vec<String>,
 }
 
@@ -20,10 +21,36 @@ pub struct ComponentDef {
 }
 
 pub enum PartValue {
+    Seq(Vec<PartValue>),
     Str(String),
     Num(f32),
     Bool(bool),
     Image(String),
+    Faction(String),
+}
+
+impl std::fmt::Display for PartValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PartValue::Seq(vec) => write!(
+                f,
+                "vec![{}].drain(..).collect()",
+                vec.iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+            PartValue::Str(value) => write!(f, "{}", value),
+            PartValue::Num(value) => write!(f, "{}f32", value),
+            PartValue::Bool(value) => write!(f, "{}", value),
+            PartValue::Image(path) => write!(
+                f,
+                "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()",
+                path
+            ),
+            PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction),
+        }
+    }
 }
 
 struct ComponentDefVisitor;
@@ -58,7 +85,15 @@ impl<'de> Visitor<'de> for PartValueVisitor {
     type Value = PartValue;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("map with one element, bool, string or number")
+        formatter.write_str("map with one element, bool, string or number or seq of listed items")
+    }
+
+    fn visit_seq<S: SeqAccess<'de>>(self, mut seq: S) -> Result<Self::Value, S::Error> {
+        let mut v: Vec<PartValue> = vec![];
+        while let Some(value) = seq.next_element::<PartValue>()? {
+            v.push(value)
+        }
+        Ok(PartValue::Seq(v))
     }
 
     fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
@@ -85,6 +120,7 @@ impl<'de> Visitor<'de> for PartValueVisitor {
         if let Some((key, value)) = access.next_entry::<String, String>()? {
             match key.as_ref() {
                 "image" => Ok(PartValue::Image(value.to_owned())),
+                "faction" => Ok(PartValue::Faction(value.to_owned())),
                 key => Err(de::Error::custom(format!("No known type {}", key))),
             }
         } else {

@@ -62,7 +62,7 @@ fn run() -> Result<()> {
 fn main() {
     setup_logging().expect("Loggin intializtion error");
     match run() {
-        Ok(_) => println!("Exited cleanly."),
-        Err(e) => println!("Error occured: {}", e),
+        Ok(_) => info!("Exited cleanly."),
+        Err(e) => info!("Error occured: {}", e),
     }
 }

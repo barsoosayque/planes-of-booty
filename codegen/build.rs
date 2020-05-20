@@ -59,15 +59,7 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
                 &contents
                     .parts
                     .iter()
-                    .map(|(part_name, part_value)| match part_value {
-                        PartValue::Str(value) => format!("{}:{}", part_name, value),
-                        PartValue::Num(value) => format!("{}:{}f32", part_name, value),
-                        PartValue::Bool(value) => format!("{}:{}", part_name, value),
-                        PartValue::Image(path) => format!(
-                            "{}:assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()",
-                            part_name, path
-                        ),
-                    })
+                    .map(|(part_name, part_value)| format!("{}:{}", part_name, part_value))
                     .collect::<Vec<String>>()
                     .join(","),
             );

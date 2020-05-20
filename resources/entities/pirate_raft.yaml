@@ -8,6 +8,15 @@ components:
         acceleration_flat: 80.0
         acceleration_change_throttle: 0.01
         __default: true
+    SearchForTarget:
+        from_factions: [ { faction: "Good" } ]
+        radius: 200.0
+    FollowTarget:
+        keep_distance: 80.0
+        follow_distance: 300.0
+    Target:
+        __default: true
     Transform:
         __default: true
-tags: ["Pirate"]
+    Faction:
+        id: { faction: "Pirates" }
