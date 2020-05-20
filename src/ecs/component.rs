@@ -32,3 +32,11 @@ pub struct DirectionalSprite {
     pub width: f32,
     pub height: f32,
 }
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Sprite {
+    pub asset: Arc<ImageAsset>,
+    pub width: f32,
+    pub height: f32,
+}

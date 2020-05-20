@@ -23,8 +23,10 @@ impl Game {
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.register::<tag::Player>();
+        world.register::<tag::Pirate>();
         world.register::<Movement>();
         world.register::<Transform>();
+        world.register::<Sprite>();
         world.register::<DirectionalSprite>();
         dispatcher.setup(&mut world);
 
@@ -32,6 +34,7 @@ impl Game {
         let imgui = ImGuiSystem::new(ctx);
 
         entity::spawn_player(&mut world, ctx, &mut assets);
+        entity::spawn_pirate_raft(&mut world, ctx, &mut assets);
 
         Game {
             world,
