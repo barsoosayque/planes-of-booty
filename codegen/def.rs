@@ -1,9 +1,11 @@
+use heck::CamelCase;
 use serde::{
     de::{self, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer,
 };
 use std::collections::BTreeMap as Map;
 use std::fmt;
+use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
 pub struct EntityDef {
@@ -37,36 +39,29 @@ pub enum PartValue {
     Single {
         value: Box<PartValue>,
     },
-}
-
-pub fn get_view_from<'a>(
-    def: &'a EntityDef,
-    component_name: &str,
-    asset_part: &str,
-) -> Option<(&'a PartValue, &'a PartValue, &'a PartValue)> {
-    def.components.get(component_name).map(|comp| {
-        (
-            comp.parts
-                .get(asset_part)
-                .map(|part| match part {
-                    PartValue::Single { value } => value.as_ref(),
-                    PartValue::Directional { north, .. } => north.as_ref(),
-                    _ => panic!("{} should be either single or directional", component_name),
-                })
-                .expect(&format!(
-                    "{} field is missing for component {} in {}",
-                    asset_part, component_name, def.name
-                )),
-            comp.parts.get("width").expect(&format!(
-                "width field is missing component for {} in {}",
-                component_name, def.name
-            )),
-            comp.parts.get("height").expect(&format!(
-                "height field is missing component for {} in {}",
-                component_name, def.name
-            )),
-        )
-    })
+    Size {
+        width: f32,
+        height: f32,
+    },
+    Vec {
+        x: f32,
+        y: f32,
+    },
+    Body {
+        status: String,
+        mass: f32,
+    },
+    Box {
+        uuid: Uuid,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    Collide {
+        sensor: bool,
+        shape: Box<PartValue>,
+    },
 }
 
 impl std::fmt::Display for PartValue {
@@ -102,8 +97,97 @@ impl std::fmt::Display for PartValue {
             PartValue::Single { value } => {
                 write!(f, "component::DirOrSingle::Single{{value:{}}}", value)
             }
+            PartValue::Size { width, height } => {
+                write!(f, "crate::math::Size2f::new({}f32, {}f32)", width, height)
+            }
+            PartValue::Vec { x, y } => write!(f, "crate::math::Vec2f::new({}f32, {}f32)", x, y),
+            PartValue::Body { .. } => write!(f, "body"),
+            PartValue::Box { uuid, .. } => write!(f, "box_{}.clone()", uuid.to_simple()),
+            PartValue::Collide { sensor, shape } => {
+                let first_shape = match &**shape {
+                    PartValue::Single { value } => value,
+                    PartValue::Directional { north, .. } => north,
+                    _ => panic!("No valid shapes defined to create a collide"),
+                };
+
+                write!(
+                    f,
+                    "(world.write_resource::<resource::PhysicWorld>().colliders.insert(
+                        nphysics2d::object::ColliderDesc::new({}).sensor({})
+                         .build(nphysics2d::object::BodyPartHandle(body, 0))
+                    ), {})",
+                    first_shape, sensor, shape
+                )
+            }
         }
     }
+}
+
+impl PartValue {
+    pub fn initialize(&self) -> Option<String> {
+        match self {
+            PartValue::Body { mass, status } => Some(format!(
+                "let body = world.write_resource::<resource::PhysicWorld>()
+                    .bodies.insert(nphysics2d::object::RigidBodyDesc::new()
+                        .mass({}f32).status(nphysics2d::object::BodyStatus::{}).build()
+                    );",
+                mass,
+                status.to_camel_case()
+            )),
+            PartValue::Box {
+                uuid,
+                x,
+                y,
+                width,
+                height,
+            } => Some(format!(
+                "let box_{} = nphysics2d::ncollide2d::shape::ShapeHandle::new(
+                        nphysics2d::ncollide2d::shape::ConvexPolygon::try_from_points(&[
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
+                        ]).unwrap()
+                );",
+                uuid.to_simple(),
+                x,
+                y,
+                x + width,
+                y,
+                x + width,
+                y + height,
+                x,
+                y + height,
+            )),
+            _ => None,
+        }
+    }
+}
+
+pub fn get_view_from<'a>(
+    def: &'a EntityDef,
+    component_name: &str,
+    asset_part: &str,
+) -> Option<(&'a PartValue, &'a PartValue)> {
+    def.components.get(component_name).map(|comp| {
+        (
+            comp.parts
+                .get(asset_part)
+                .map(|part| match part {
+                    PartValue::Single { value } => value.as_ref(),
+                    PartValue::Directional { north, .. } => north.as_ref(),
+                    _ => panic!("{} should be either single or directional", component_name),
+                })
+                .expect(&format!(
+                    "{} field is missing for component {} in {}",
+                    asset_part, component_name, def.name
+                )),
+            comp.parts.get("size").expect(&format!(
+                "width field is missing component for {} in {}",
+                component_name, def.name
+            )),
+        )
+    })
 }
 
 struct ComponentDefVisitor;
@@ -197,6 +281,37 @@ impl<'de> Visitor<'de> for PartValueVisitor {
         } else if let Some(value) = buffer.remove("single") {
             Ok(PartValue::Single {
                 value: Box::new(value),
+            })
+        } else if let (Some(PartValue::Num(width)), Some(PartValue::Num(height))) =
+            (buffer.remove("width"), buffer.remove("height"))
+        {
+            Ok(PartValue::Size { width, height })
+        } else if let (Some(PartValue::Num(x)), Some(PartValue::Num(y))) =
+            (buffer.remove("x"), buffer.remove("y"))
+        {
+            Ok(PartValue::Vec { x, y })
+        } else if let (Some(PartValue::Num(mass)), Some(PartValue::Str(status))) =
+            (buffer.remove("mass"), buffer.remove("status"))
+        {
+            Ok(PartValue::Body { mass, status })
+        } else if let (Some(PartValue::Vec { x, y }), Some(PartValue::Size { width, height })) =
+            (buffer.remove("pos"), buffer.remove("size"))
+        {
+            let id = format!("{}-{}-{}-{}", x, y, width, height);
+            Ok(PartValue::Box {
+                // Generate uuid based on x-y-width-height
+                uuid: Uuid::new_v5(&Uuid::NAMESPACE_OID, id.as_ref()),
+                x,
+                y,
+                width,
+                height,
+            })
+        } else if let (Some(PartValue::Bool(sensor)), Some(shape)) =
+            (buffer.remove("sensor"), buffer.remove("shape"))
+        {
+            Ok(PartValue::Collide {
+                sensor,
+                shape: Box::new(shape),
             })
         } else {
             Err(de::Error::custom(format!(

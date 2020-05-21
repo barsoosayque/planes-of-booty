@@ -1,14 +1,20 @@
 use crate::assets::*;
-use crate::math::Vec2f;
+use crate::math::{Size2f, Vec2f};
+use nphysics2d::{
+    object::{DefaultBodyHandle, DefaultColliderHandle},
+    ncollide2d::shape::ShapeHandle,
+};
 use specs::{Component, Entity, VecStorage};
 use std::collections::HashSet as Set;
 use std::sync::Arc;
 
-// #[derive(Default, Debug, Component)]
-// #[storage(VecStorage)]
-// pub struct Physic {
-//     is_initialized: bool,
-// }
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct Physic {
+    pub body: DefaultBodyHandle,
+    pub collide: (DefaultColliderHandle, CollideShapeHandle),
+}
+type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
@@ -65,8 +71,7 @@ pub struct Movement {
 #[storage(VecStorage)]
 pub struct Sprite {
     pub asset: SpriteAsset,
-    pub width: f32,
-    pub height: f32,
+    pub size: Size2f,
 }
 pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 

@@ -5,8 +5,26 @@ components:
             east: { image: "/sprites/ship-east.png" }
             south: { image: "/sprites/ship-south.png" }
             west: { image: "/sprites/ship-west.png" }
-        width: 80.0
-        height: 80.0
+        size: { width: 80.0, height: 80.0 }
+    Physic:
+        body: 
+            status: "dynamic"
+            mass: 1.0
+        collide:
+            sensor: false
+            shape:
+                north:
+                    pos: { x: 0, y: 0 }
+                    size: { width: 100, height: 200 }
+                east: 
+                    pos: { x: 0, y: 0 }
+                    size: { width: 100, height: 200 }
+                south: 
+                    pos: { x: 0, y: 0 }
+                    size: { width: 100, height: 200 }
+                west: 
+                    pos: { x: 0, y: 0 }
+                    size: { width: 100, height: 200 }
     Movement:
         max_velocity: 200.0
         acceleration_flat: 150.0

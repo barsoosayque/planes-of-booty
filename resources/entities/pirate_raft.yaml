@@ -2,8 +2,7 @@ components:
     Sprite:
         asset:
             single: { image: "/sprites/pirate-raft.png" }
-        width: 30.0
-        height: 60.0
+        size: { width: 30.0, height: 60.0 }
     Movement:
         max_velocity: 100.0
         acceleration_flat: 80.0

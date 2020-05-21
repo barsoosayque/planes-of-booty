@@ -37,6 +37,7 @@ impl Game {
         world.insert(UiHub::default());
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
+        world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<Movement>();
         world.register::<Transform>();
@@ -45,6 +46,7 @@ impl Game {
         world.register::<SearchForTarget>();
         world.register::<FollowTarget>();
         world.register::<Faction>();
+        world.register::<Physic>();
         dispatcher.setup(&mut world);
 
         let mut game = Self {

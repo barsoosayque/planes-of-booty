@@ -2,6 +2,7 @@ use anyhow::Result;
 use codegen::*;
 use def::*;
 use std::fs;
+use std::collections::HashSet as Set;
 
 mod def;
 
@@ -40,7 +41,7 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
         .arg("id", "&str")
         .arg("ctx", "&mut ggez::Context")
         .arg("assets", "&mut crate::assets::AssetManager");
-    fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, f32, f32)>");
+    fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, crate::math::Size2f)>");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
 
@@ -48,8 +49,8 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
     for def in defs {
         match get_view_from(def, "Sprite", "asset") {
             Some(asset) => fn_gen.line(&format!(
-                "\"{}\" => Some(({}, {}, {})),",
-                def.name, asset.0, asset.1, asset.2
+                "\"{}\" => Some(({}, {})),",
+                def.name, asset.0, asset.1
             )),
             None => fn_gen.line(&format!("\"{}\" => None,", def.name)),
         };
@@ -60,6 +61,27 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
 }
 
 fn generate_spawn_fn(def: &EntityDef) -> Function {
+    // recursivly collect inits
+    fn collect_init(part: &PartValue, buffer: &mut Set<String>) {
+        if let Some(init) = part.initialize() {
+            buffer.insert(init);
+        }
+        match part {
+            PartValue::Seq(vec) => for part in vec {
+                collect_init(part, buffer);
+            },
+            PartValue::Directional { north, east, west, south, } => {
+                collect_init(north, buffer);
+                collect_init(east, buffer);
+                collect_init(west, buffer);
+                collect_init(south, buffer);
+            },
+            PartValue::Single { value } => collect_init(value, buffer),
+            PartValue::Collide { shape, ..  } => collect_init(shape, buffer),
+            _ => ()
+        }
+    }
+
     let mut fn_gen = Function::new(&format!("spawn_{}", def.name));
     fn_gen
         .arg("world", "&specs::World")
@@ -70,6 +92,14 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
 
     fn_gen.line("use specs::{WorldExt,world::Builder};");
     fn_gen.line("let mut assets = world.write_resource::<crate::assets::AssetManager>();");
+    let mut buffer: Set<String> = Set::new();
+    for (_, part) in def.components.iter().flat_map(|(_, contents)| contents.parts.iter()) {
+        collect_init(part, &mut buffer);
+    }
+    for line in buffer {
+        fn_gen.line(&line);
+    }
+
     fn_gen.line("world.create_entity_unchecked()");
     for tag in &def.tags {
         fn_gen.line(format!(".with(tag::{})", tag));
@@ -124,8 +154,8 @@ fn main() {
             }
             Err(err) => {
                 println!("Error !");
-                println!(
-                    "cargo:warning=Error while parsing entity definition file {:?}: {}",
+                panic!(
+                    "Error while parsing entity definition file {:?}: {}",
                     path, err
                 );
             }

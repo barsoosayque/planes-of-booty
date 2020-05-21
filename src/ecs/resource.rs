@@ -1,11 +1,37 @@
-use crate::math::Point2f;
+use crate::math::{Point2f, Vec2f};
 use crate::ui::*;
 use ggez::input;
+use nphysics2d::force_generator::DefaultForceGeneratorSet;
+use nphysics2d::joint::DefaultJointConstraintSet;
+use nphysics2d::object::{DefaultBodySet, DefaultColliderSet};
+use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use std::collections::HashSet;
 use std::collections::VecDeque as Queue;
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(pub std::time::Duration);
+
+pub struct PhysicWorld {
+    pub mecha_world: DefaultMechanicalWorld<f32>,
+    pub geometry_world: DefaultGeometricalWorld<f32>,
+    pub bodies: DefaultBodySet<f32>,
+    pub colliders: DefaultColliderSet<f32>,
+    pub joint_constraints: DefaultJointConstraintSet<f32>,
+    pub force_generators: DefaultForceGeneratorSet<f32>,
+}
+impl PhysicWorld {
+    pub fn new(gravity: Vec2f) -> Self {
+        use nphysics2d::nalgebra::Vector2;
+        Self {
+            mecha_world: DefaultMechanicalWorld::new(Vector2::new(gravity.x, gravity.y)),
+            geometry_world: DefaultGeometricalWorld::new(),
+            bodies: DefaultBodySet::new(),
+            colliders: DefaultColliderSet::new(),
+            joint_constraints: DefaultJointConstraintSet::new(),
+            force_generators: DefaultForceGeneratorSet::new(),
+        }
+    }
+}
 
 #[derive(Default, Debug)]
 pub struct Inputs {

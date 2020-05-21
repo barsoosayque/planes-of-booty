@@ -15,17 +15,12 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
 
     fn run(&mut self, (ui_hub, inputs, mut assets): Self::SystemData) {
         // spawn selected debug item under cursor
-        if let Some((sprite, width, height)) = ui_hub
+        if let Some((sprite, size)) = ui_hub
             .debug_window
             .selected_entity
             .and_then(|id| entity::view(id, self.0, &mut assets))
         {
-            render_sprite(
-                self.0,
-                &sprite.0,
-                &inputs.mouse_pos.to_vector(),
-                &Size2f::new(width, height),
-            );
+            render_sprite(self.0, &sprite.0, &inputs.mouse_pos.to_vector(), &size);
         }
 
         self.1.render(self.0);
@@ -44,12 +39,7 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         for (transform, movement, sprite) in (&transforms, &movements, &sprites).join() {
             match &sprite.asset {
                 SpriteAsset::Single { value } => {
-                    render_sprite(
-                        self.0,
-                        &value.0,
-                        &transform.pos,
-                        &Size2f::new(sprite.width, sprite.height),
-                    );
+                    render_sprite(self.0, &value.0, &transform.pos, &sprite.size);
                 }
                 SpriteAsset::Directional {
                     north,
@@ -64,12 +54,7 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
                         Direction::West => &west.0,
                     };
 
-                    render_sprite(
-                        self.0,
-                        &img,
-                        &transform.pos,
-                        &Size2f::new(sprite.width, sprite.height),
-                    );
+                    render_sprite(self.0, &img, &transform.pos, &sprite.size);
                 }
             }
         }
