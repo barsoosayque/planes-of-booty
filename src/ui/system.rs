@@ -1,17 +1,17 @@
-use gfx::{format::Rgba8, handle::RenderTargetView, memory::Typed};
 use crate::math::Point2f;
+use gfx::{format::Rgba8, handle::RenderTargetView, memory::Typed};
 use ggez::graphics::{self, BackendSpec, GlBackendSpec};
 use imgui;
 use imgui_gfx_renderer::*;
-use std::iter::IntoIterator;
+use std::cell::RefCell;
 
 pub trait UiBuilder {
-    fn build(&self, ui: &mut imgui::Ui);
+    fn build(&mut self, ui: &mut imgui::Ui);
 }
 
 pub struct ImGuiSystem {
-    imgui: imgui::Context,
-    renderer: Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>,
+    imgui: RefCell<imgui::Context>,
+    renderer: RefCell<Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>>,
 }
 
 impl ImGuiSystem {
@@ -37,13 +37,17 @@ impl ImGuiSystem {
             }
         };
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
-        Self { imgui, renderer }
+        Self {
+            imgui: RefCell::new(imgui),
+            renderer: RefCell::new(renderer),
+        }
     }
 
     pub fn update(&mut self, ctx: &ggez::Context, delta: std::time::Duration) {
         use ggez::input::mouse::{self, MouseButton};
 
-        let mut io = self.imgui.io_mut();
+        let mut imgui = self.imgui.borrow_mut();
+        let mut io = imgui.io_mut();
         let window = graphics::window(ctx);
 
         // it's very important to round so we don't get blurry image
@@ -73,19 +77,15 @@ impl ImGuiSystem {
         io.delta_time = delta.as_secs_f32();
     }
 
-    pub fn render<I, U>(&mut self, ctx: &mut ggez::Context, builders_iter: I)
-    where
-        U: UiBuilder,
-        I: IntoIterator<Item = U>,
-    {
-        let mut ui = self.imgui.frame();
-        for builder in builders_iter {
-            builder.build(&mut ui);
-        }
+    pub fn render<U: UiBuilder>(&self, ctx: &mut ggez::Context, builder: &mut U) {
+        let mut imgui = self.imgui.borrow_mut();
+        let mut ui = imgui.frame();
+        builder.build(&mut ui);
 
         let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);
         let draw_data = ui.render();
         self.renderer
+            .borrow_mut()
             .render(
                 factory,
                 encoder,

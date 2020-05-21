@@ -2,7 +2,7 @@ use crate::assets::*;
 use crate::math::*;
 use crate::ecs::{component::*, resource::*, system::*, tag};
 use crate::entity;
-use crate::ui::{self, system::ImGuiSystem};
+use crate::ui::ImGuiSystem;
 use ggez::event::EventHandler;
 use ggez::timer;
 use ggez::{graphics, Context, GameResult};
@@ -12,7 +12,7 @@ pub struct Game {
     world: World,
     dispatcher: Dispatcher<'static, 'static>,
     assets: AssetManager,
-    imgui: ImGuiSystem,
+    imgui: ImGuiSystem
 }
 
 impl Game {
@@ -25,6 +25,7 @@ impl Game {
             .with(InputsSystem, "inputs_system", &[])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
+        world.insert(UiHub::default());
         world.register::<tag::Player>();
         world.register::<Movement>();
         world.register::<Transform>();
@@ -38,7 +39,6 @@ impl Game {
         dispatcher.setup(&mut world);
 
         let mut assets = AssetManager::new();
-        let imgui = ImGuiSystem::new(ctx);
 
         let player = entity::spawn_player(&mut world, ctx, &mut assets);
         world.write_storage::<Transform>().insert(
@@ -50,12 +50,14 @@ impl Game {
         ).unwrap();
 
         entity::spawn_pirate_raft(&mut world, ctx, &mut assets);
+        
+        let imgui = ImGuiSystem::new(ctx);
 
         Game {
             world,
             dispatcher,
             assets,
-            imgui,
+            imgui
         }
     }
 }
@@ -85,7 +87,7 @@ impl EventHandler for Game {
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
         SpriteRenderSystem(ctx).run_now(&self.world);
         DebugRenderSystem(ctx).run_now(&self.world);
-        self.imgui.render(ctx, vec![ui::debug::DebugToolsUi]);
+        GameUiSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
     }
 }
