@@ -3,6 +3,18 @@ use crate::math::*;
 use log::debug;
 use specs::{Entities, Join, Read, ReadStorage, System, WriteStorage};
 
+pub struct PhysicSystem;
+impl<'a> System<'a> for PhysicSystem {
+    type SystemData = (
+        WriteStorage<'a, Transform>,
+        WriteStorage<'a, Movement>,
+        Read<'a, DeltaTime>,
+    );
+
+    fn run(&mut self, (mut transforms, mut movements, delta): Self::SystemData) {
+    }
+}
+
 pub struct MovementSystem;
 impl MovementSystem {
     const VELOCITY_DECREASE: f32 = 0.98;

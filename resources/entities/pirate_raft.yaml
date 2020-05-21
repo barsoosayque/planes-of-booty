@@ -1,6 +1,7 @@
 components:
     Sprite:
-        asset: { image: "/sprites/pirate-raft.png" }
+        asset:
+            single: { image: "/sprites/pirate-raft.png" }
         width: 30.0
         height: 60.0
     Movement:

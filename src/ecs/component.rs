@@ -1,8 +1,14 @@
 use crate::assets::*;
 use crate::math::Vec2f;
-use specs::{Entity, Component, VecStorage};
-use std::sync::Arc;
+use specs::{Component, Entity, VecStorage};
 use std::collections::HashSet as Set;
+use std::sync::Arc;
+
+// #[derive(Default, Debug, Component)]
+// #[storage(VecStorage)]
+// pub struct Physic {
+//     is_initialized: bool,
+// }
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
@@ -14,25 +20,26 @@ pub struct Target {
 #[storage(VecStorage)]
 pub struct FollowTarget {
     pub keep_distance: f32,
-    pub follow_distance: f32
+    pub follow_distance: f32,
 }
 
 #[derive(Default, Component)]
 #[storage(VecStorage)]
 pub struct SearchForTarget {
     pub from_factions: Set<FactionId>,
-    pub radius: f32
+    pub radius: f32,
 }
 
 #[derive(Component)]
 #[storage(VecStorage)]
 pub struct Faction {
-    pub id: FactionId
+    pub id: FactionId,
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum FactionId {
-    Pirates, Good
+    Pirates,
+    Good,
 }
 
 #[derive(Default, Debug, Component)]
@@ -56,19 +63,22 @@ pub struct Movement {
 
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
-pub struct DirectionalSprite {
-    pub north: Arc<ImageAsset>,
-    pub east: Arc<ImageAsset>,
-    pub south: Arc<ImageAsset>,
-    pub west: Arc<ImageAsset>,
+pub struct Sprite {
+    pub asset: SpriteAsset,
     pub width: f32,
     pub height: f32,
 }
+pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 
-#[derive(Debug, Component)]
-#[storage(VecStorage)]
-pub struct Sprite {
-    pub asset: Arc<ImageAsset>,
-    pub width: f32,
-    pub height: f32,
+#[derive(Debug)]
+pub enum DirOrSingle<T> {
+    Single {
+        value: T,
+    },
+    Directional {
+        north: T,
+        east: T,
+        south: T,
+        west: T,
+    },
 }

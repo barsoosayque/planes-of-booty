@@ -20,6 +20,7 @@ pub struct ComponentDef {
     pub parts: Map<String, PartValue>,
 }
 
+#[derive(Clone, Debug)]
 pub enum PartValue {
     Seq(Vec<PartValue>),
     Str(String),
@@ -27,6 +28,15 @@ pub enum PartValue {
     Bool(bool),
     Image(String),
     Faction(String),
+    Directional {
+        north: Box<PartValue>,
+        east: Box<PartValue>,
+        west: Box<PartValue>,
+        south: Box<PartValue>,
+    },
+    Single {
+        value: Box<PartValue>,
+    },
 }
 
 pub fn get_view_from<'a>(
@@ -36,10 +46,17 @@ pub fn get_view_from<'a>(
 ) -> Option<(&'a PartValue, &'a PartValue, &'a PartValue)> {
     def.components.get(component_name).map(|comp| {
         (
-            comp.parts.get(asset_part).expect(&format!(
-                "{} field is missing for component {} in {}",
-                asset_part, component_name, def.name
-            )),
+            comp.parts
+                .get(asset_part)
+                .map(|part| match part {
+                    PartValue::Single { value } => value.as_ref(),
+                    PartValue::Directional { north, .. } => north.as_ref(),
+                    _ => panic!("{} should be either single or directional", component_name),
+                })
+                .expect(&format!(
+                    "{} field is missing for component {} in {}",
+                    asset_part, component_name, def.name
+                )),
             comp.parts.get("width").expect(&format!(
                 "width field is missing component for {} in {}",
                 component_name, def.name
@@ -72,6 +89,19 @@ impl std::fmt::Display for PartValue {
                 path
             ),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction),
+            PartValue::Directional {
+                north,
+                east,
+                south,
+                west,
+            } => write!(
+                f,
+                "component::DirOrSingle::Directional{{north:{},east:{},south:{},west:{}}}",
+                north, east, south, west
+            ),
+            PartValue::Single { value } => {
+                write!(f, "component::DirOrSingle::Single{{value:{}}}", value)
+            }
         }
     }
 }
@@ -140,14 +170,39 @@ impl<'de> Visitor<'de> for PartValueVisitor {
     }
 
     fn visit_map<M: MapAccess<'de>>(self, mut access: M) -> Result<Self::Value, M::Error> {
-        if let Some((key, value)) = access.next_entry::<String, String>()? {
-            match key.as_ref() {
-                "image" => Ok(PartValue::Image(value.to_owned())),
-                "faction" => Ok(PartValue::Faction(value.to_owned())),
-                key => Err(de::Error::custom(format!("No known type {}", key))),
+        let mut buffer = Map::<String, PartValue>::new();
+
+        while let Some((key, value)) = access.next_entry::<String, PartValue>()? {
+            match (key.as_ref(), value) {
+                ("image", PartValue::Str(value)) => return Ok(PartValue::Image(value)),
+                ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
+                (key, value) => {
+                    buffer.insert(key.to_owned(), value);
+                }
             }
+        }
+
+        if let (Some(north), Some(east), Some(south), Some(west)) = (
+            buffer.remove("north"),
+            buffer.remove("east"),
+            buffer.remove("south"),
+            buffer.remove("west"),
+        ) {
+            Ok(PartValue::Directional {
+                north: Box::new(north),
+                south: Box::new(south),
+                east: Box::new(east),
+                west: Box::new(west),
+            })
+        } else if let Some(value) = buffer.remove("single") {
+            Ok(PartValue::Single {
+                value: Box::new(value),
+            })
         } else {
-            Err(de::Error::custom("Empty map"))
+            Err(de::Error::custom(format!(
+                "No special fields defined. Here is buffer: {:?}",
+                buffer
+            )))
         }
     }
 }

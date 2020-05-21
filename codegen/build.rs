@@ -46,10 +46,7 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
 
     fn_gen.line("match id {");
     for def in defs {
-        let asset = get_view_from(def, "DirectionalSprite", "north")
-            .or(get_view_from(def, "Sprite", "asset"));
-
-        match asset {
+        match get_view_from(def, "Sprite", "asset") {
             Some(asset) => fn_gen.line(&format!(
                 "\"{}\" => Some(({}, {}, {})),",
                 def.name, asset.0, asset.1, asset.2

@@ -31,6 +31,7 @@ impl Game {
             .with(FollowTargetSystem, "follow_target_system", &[])
             .with(MovementSystem, "movement_system", &[])
             .with(InputsSystem, "inputs_system", &[])
+            .with(PhysicSystem, "physic_system", &[])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -40,7 +41,6 @@ impl Game {
         world.register::<Movement>();
         world.register::<Transform>();
         world.register::<Sprite>();
-        world.register::<DirectionalSprite>();
         world.register::<Target>();
         world.register::<SearchForTarget>();
         world.register::<FollowTarget>();

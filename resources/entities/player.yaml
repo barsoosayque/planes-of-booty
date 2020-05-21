@@ -1,9 +1,10 @@
 components:
-    DirectionalSprite:
-        east: { image: "/sprites/ship-east.png" }
-        north: { image: "/sprites/ship-north.png" }
-        south: { image: "/sprites/ship-south.png" }
-        west: { image: "/sprites/ship-west.png" }
+    Sprite:
+        asset:
+            north: { image: "/sprites/ship-north.png" }
+            east: { image: "/sprites/ship-east.png" }
+            south: { image: "/sprites/ship-south.png" }
+            west: { image: "/sprites/ship-west.png" }
         width: 80.0
         height: 80.0
     Movement:

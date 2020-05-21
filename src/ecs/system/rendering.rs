@@ -37,34 +37,41 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
     type SystemData = (
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Movement>,
-        ReadStorage<'a, DirectionalSprite>,
         ReadStorage<'a, Sprite>,
     );
 
-    fn run(&mut self, (transforms, movements, dir_sprites, sprites): Self::SystemData) {
-        for (transform, movement, sprite) in (&transforms, &movements, &dir_sprites).join() {
-            let img = match Direction::from_vec2f(&movement.velocity) {
-                Direction::North => &sprite.north.0,
-                Direction::East => &sprite.east.0,
-                Direction::South => &sprite.south.0,
-                Direction::West => &sprite.west.0,
-            };
+    fn run(&mut self, (transforms, movements, sprites): Self::SystemData) {
+        for (transform, movement, sprite) in (&transforms, &movements, &sprites).join() {
+            match &sprite.asset {
+                SpriteAsset::Single { value } => {
+                    render_sprite(
+                        self.0,
+                        &value.0,
+                        &transform.pos,
+                        &Size2f::new(sprite.width, sprite.height),
+                    );
+                }
+                SpriteAsset::Directional {
+                    north,
+                    east,
+                    south,
+                    west,
+                } => {
+                    let img = match Direction::from_vec2f(&movement.velocity) {
+                        Direction::North => &north.0,
+                        Direction::East => &east.0,
+                        Direction::South => &south.0,
+                        Direction::West => &west.0,
+                    };
 
-            render_sprite(
-                self.0,
-                &img,
-                &transform.pos,
-                &Size2f::new(sprite.width, sprite.height),
-            );
-        }
-
-        for (transform, sprite) in (&transforms, &sprites).join() {
-            render_sprite(
-                self.0,
-                &sprite.asset.0,
-                &transform.pos,
-                &Size2f::new(sprite.width, sprite.height),
-            );
+                    render_sprite(
+                        self.0,
+                        &img,
+                        &transform.pos,
+                        &Size2f::new(sprite.width, sprite.height),
+                    );
+                }
+            }
         }
     }
 }
@@ -96,7 +103,12 @@ impl<'a> System<'a> for DebugTargetRenderSystem<'_> {
                     // if there is target and this entity is following it
                     render_stroke_circle(self.0, &pos, follow.follow_distance, 2.0, 0xFC2F2FCC);
                     render_stroke_circle(self.0, &pos, follow.keep_distance, 2.0, 0x9BD644CC);
-                    render_line(self.0, &[transform.pos.to_point(), target_pos.to_point()], 2.0, 0xFC53A7CC);
+                    render_line(
+                        self.0,
+                        &[transform.pos.to_point(), target_pos.to_point()],
+                        2.0,
+                        0xFC53A7CC,
+                    );
                 }
             } else if let Some(search) = search {
                 // if no target and this entity is able to search for a target
