@@ -17,11 +17,16 @@ pub struct Inputs {
 
 #[derive(Default, Debug)]
 pub struct UiHub {
+    pub menu: Menu,
     pub debug_window: DebugWindow,
 }
 impl UiBuilder for UiHub {
     fn build(&mut self, ui: &mut imgui::Ui) {
-        self.debug_window.build(ui)
+        self.menu.build(ui);
+
+        if self.menu.is_show_spawn_window {
+            self.debug_window.build(ui);
+        }
     }
 }
 

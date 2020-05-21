@@ -1,6 +1,6 @@
 use super::{
     super::{component::*, resource::*},
-    render_sprite,
+    render_fill_circle, render_line, render_sprite, render_stroke_circle,
 };
 use crate::assets::AssetManager;
 use crate::entity;
@@ -69,53 +69,53 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
     }
 }
 
-pub struct DebugRenderSystem<'a>(pub &'a mut Context);
-impl<'a> System<'a> for DebugRenderSystem<'_> {
+pub struct DebugTargetRenderSystem<'a>(pub &'a mut Context);
+impl<'a> System<'a> for DebugTargetRenderSystem<'_> {
     type SystemData = (
-        Entities<'a>,
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Target>,
         ReadStorage<'a, SearchForTarget>,
         ReadStorage<'a, FollowTarget>,
     );
 
-    fn run(&mut self, (entities, transforms, targets, searches, follows): Self::SystemData) {
-        for (e, transform, target_opt, search_opt, follow_opt) in (
-            &entities,
+    fn run(&mut self, (transforms, targets, searches, follows): Self::SystemData) {
+        let join = (
             &transforms,
-            (&targets).maybe(),
+            &targets,
             (&searches).maybe(),
             (&follows).maybe(),
         )
-            .join()
-        {
-            if let Some(search) = search_opt {
-                let circle = graphics::Mesh::new_circle(
-                    self.0,
-                    graphics::DrawMode::fill(),
-                    Point2f::zero(),
-                    search.radius,
-                    0.5,
-                    graphics::Color::from_rgba_u32(0xCC330044),
-                )
-                .unwrap();
-                let param = graphics::DrawParam::default().dest(transform.pos.to_point());
-                ggez::graphics::draw(self.0, &circle, param).unwrap();
-            }
-            if let Some(follow) = follow_opt {
-                let circle = graphics::Mesh::new_circle(
-                    self.0,
-                    graphics::DrawMode::stroke(2.0),
-                    Point2f::zero(),
-                    follow.follow_distance,
-                    0.5,
-                    graphics::Color::from_rgba_u32(0xFFFFFFFF),
-                )
-                .unwrap();
-                let param = graphics::DrawParam::default().dest(transform.pos.to_point());
-                ggez::graphics::draw(self.0, &circle, param).unwrap();
-            }
+            .join();
 
+        for (transform, target, search, follow) in join {
+            let pos = transform.pos.to_point();
+            if let Some(target_e) = target.target {
+                if let Some(follow) = follow {
+                    let target_pos = transforms.get(target_e).unwrap().pos;
+
+                    // if there is target and this entity is following it
+                    render_stroke_circle(self.0, &pos, follow.follow_distance, 2.0, 0xFC2F2FCC);
+                    render_stroke_circle(self.0, &pos, follow.keep_distance, 2.0, 0x9BD644CC);
+                    render_line(self.0, &[transform.pos.to_point(), target_pos.to_point()], 2.0, 0xFC53A7CC);
+                }
+            } else if let Some(search) = search {
+                // if no target and this entity is able to search for a target
+                render_fill_circle(self.0, &pos, search.radius, 0xFC2F2F33);
+            }
+        }
+    }
+}
+
+pub struct DebugInfoRenderSystem<'a>(pub &'a mut Context);
+impl<'a> System<'a> for DebugInfoRenderSystem<'_> {
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, Target>,
+    );
+
+    fn run(&mut self, (entities, transforms, targets): Self::SystemData) {
+        for (e, transform, target_opt) in (&entities, &transforms, (&targets).maybe()).join() {
             let mut text = format!(
                 "{:?}\nTransform({:.1}, {:.1})",
                 e, transform.pos.x, transform.pos.y
@@ -123,8 +123,8 @@ impl<'a> System<'a> for DebugRenderSystem<'_> {
             if let Some(target) = target_opt {
                 text.push_str(&format!("\n{:?}", target));
             }
-            let text =
-                graphics::TextFragment::from(text).color(graphics::Color::from_rgb_u32(0x00000000));
+            let color = graphics::Color::from_rgb_u32(0x00000000);
+            let text = graphics::TextFragment::from(text).color(color);
             let text = graphics::Text::new(text);
 
             let param = graphics::DrawParam::default()

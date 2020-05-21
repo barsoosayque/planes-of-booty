@@ -9,8 +9,10 @@ pub struct DebugWindow {
 impl UiBuilder for DebugWindow {
     fn build(&mut self, ui: &mut imgui::Ui) {
         Window::new(im_str!("Debug window"))
+            .position_pivot([1.0, 0.0])
             .resizable(false)
-            .size([300.0, 0.0], Condition::FirstUseEver)
+            .focus_on_appearing(false)
+            .size([300.0, 0.0], Condition::Once)
             .build(ui, || {
                 ui.text(im_str!("Spawn entity:"));
                 ChildWindow::new("spawn_entity")

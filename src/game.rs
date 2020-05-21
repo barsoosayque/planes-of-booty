@@ -9,7 +9,6 @@ use ggez::{graphics, Context, GameResult};
 use specs::prelude::*;
 
 pub struct Game {
-    is_debug: bool,
     world: World,
     dispatcher: Dispatcher<'static, 'static>,
     imgui: ImGuiSystem,
@@ -49,7 +48,6 @@ impl Game {
         dispatcher.setup(&mut world);
 
         let mut game = Self {
-            is_debug: false,
             world,
             dispatcher,
             imgui,
@@ -111,9 +109,13 @@ impl EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+        let ui_hub = self.world.read_resource::<UiHub>();
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
-        if self.is_debug {
-            DebugRenderSystem(ctx).run_now(&self.world);
+        if ui_hub.menu.is_debug_info {
+            DebugInfoRenderSystem(ctx).run_now(&self.world);
+        }
+        if ui_hub.menu.is_debug_targeting {
+            DebugTargetRenderSystem(ctx).run_now(&self.world);
         }
         SpriteRenderSystem(ctx).run_now(&self.world);
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
