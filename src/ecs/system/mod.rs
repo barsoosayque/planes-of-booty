@@ -40,14 +40,26 @@ pub fn render_fill_circle(ctx: &mut ggez::Context, pos: &Point2f, radius: f32, c
     render_circle(ctx, pos, radius, color, graphics::DrawMode::fill());
 }
 
-pub fn render_stroke_circle(ctx: &mut ggez::Context, pos: &Point2f, radius: f32, width: f32, color: u32) {
+pub fn render_stroke_circle(
+    ctx: &mut ggez::Context,
+    pos: &Point2f,
+    radius: f32,
+    width: f32,
+    color: u32,
+) {
     render_circle(ctx, pos, radius, color, graphics::DrawMode::stroke(width));
 }
 
 pub fn render_line(ctx: &mut ggez::Context, points: &[Point2f], width: f32, color: u32) {
     let color = graphics::Color::from_rgba_u32(color);
-    let mesh =
-        graphics::Mesh::new_line(ctx, points, width, color).unwrap();
+    let mesh = graphics::Mesh::new_line(ctx, points, width, color).unwrap();
+    ggez::graphics::draw(ctx, &mesh, graphics::DrawParam::default()).unwrap();
+}
+
+pub fn render_polygon(ctx: &mut ggez::Context, points: &[Point2f], color: u32) {
+    let color = graphics::Color::from_rgba_u32(color);
+    let mode = graphics::DrawMode::fill();
+    let mesh = graphics::Mesh::new_polygon(ctx, mode, points, color).unwrap();
     ggez::graphics::draw(ctx, &mesh, graphics::DrawParam::default()).unwrap();
 }
 

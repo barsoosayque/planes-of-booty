@@ -1,7 +1,7 @@
 use super::super::{component::*, resource::*};
 use crate::math::*;
 use log::debug;
-use specs::{Entities, Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Entities, Join, Read, WriteExpect, ReadStorage, System, WriteStorage};
 
 pub struct PhysicSystem;
 impl<'a> System<'a> for PhysicSystem {
@@ -9,9 +9,11 @@ impl<'a> System<'a> for PhysicSystem {
         WriteStorage<'a, Transform>,
         WriteStorage<'a, Movement>,
         Read<'a, DeltaTime>,
+        WriteExpect<'a, PhysicWorld>,
     );
 
-    fn run(&mut self, (mut transforms, mut movements, delta): Self::SystemData) {
+    fn run(&mut self, (mut transforms, mut movements, delta, mut world): Self::SystemData) {
+        world.step(delta.0);
     }
 }
 

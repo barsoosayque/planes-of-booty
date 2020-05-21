@@ -120,6 +120,9 @@ impl EventHandler for Game {
             DebugTargetRenderSystem(ctx).run_now(&self.world);
         }
         SpriteRenderSystem(ctx).run_now(&self.world);
+        if ui_hub.menu.is_debug_physic {
+            DebugPhysicRenderSystem(ctx).run_now(&self.world);
+        }
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
     }

@@ -22,10 +22,6 @@ impl Circle2f {
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + t * (b - a)
 }
-#[inline]
-pub fn dir_bool(b: bool) -> f32 {
-    if b { 1.0 } else { -1.0 }
-}
 
 #[derive(Debug)]
 pub enum Direction {
@@ -42,15 +38,15 @@ impl Default for Direction {
 }
 
 impl Direction {
-    pub fn as_vec2f(&self) -> Vec2f {
-        match self {
-            Self::North => (0.0, -1.0),
-            Self::East => (1.0, 0.0),
-            Self::South => (0.0, 1.0),
-            Self::West => (-1.0, 0.0),
-        }
-        .into()
-    }
+    // pub fn as_vec2f(&self) -> Vec2f {
+    //     match self {
+    //         Self::North => (0.0, -1.0),
+    //         Self::East => (1.0, 0.0),
+    //         Self::South => (0.0, 1.0),
+    //         Self::West => (-1.0, 0.0),
+    //     }
+    //     .into()
+    // }
 
     pub fn from_vec2f(vec: &Vec2f) -> Self {
         if vec.x.abs() > vec.y.abs() {

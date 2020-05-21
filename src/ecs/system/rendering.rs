@@ -1,13 +1,13 @@
 use super::{
     super::{component::*, resource::*},
-    render_fill_circle, render_line, render_sprite, render_stroke_circle,
+    render_fill_circle, render_line, render_sprite, render_stroke_circle, render_polygon
 };
 use crate::assets::AssetManager;
 use crate::entity;
 use crate::math::*;
 use crate::ui::ImGuiSystem;
 use ggez::{graphics, Context};
-use specs::{Entities, Join, Read, ReadStorage, System, Write};
+use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
 
 pub struct UiRenderSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiRenderSystem<'_> {
@@ -127,6 +127,25 @@ impl<'a> System<'a> for DebugInfoRenderSystem<'_> {
             let param = graphics::DrawParam::default()
                 .dest((transform.pos + Vec2f::new(0.0, 30.0)).to_point());
             ggez::graphics::draw(self.0, &text, param).unwrap();
+        }
+    }
+}
+
+pub struct DebugPhysicRenderSystem<'a>(pub &'a mut Context);
+impl<'a> System<'a> for DebugPhysicRenderSystem<'_> {
+    type SystemData = ReadExpect<'a, PhysicWorld>;
+
+    fn run(&mut self, world: Self::SystemData) {
+        use nphysics2d::ncollide2d::shape::ConvexPolygon;
+        for (_, collider) in world.colliders.iter() {
+            if let Some(polygon) = collider.shape().as_shape::<ConvexPolygon<f32>>() {
+                let points: Vec<Point2f> = polygon
+                    .points()
+                    .iter()
+                    .map(|p| Point2f::new(p[0], p[1]))
+                    .collect();
+                render_polygon(self.0, &points, 0x05FC19AA);
+            }
         }
     }
 }

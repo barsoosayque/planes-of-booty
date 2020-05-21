@@ -31,6 +31,17 @@ impl PhysicWorld {
             force_generators: DefaultForceGeneratorSet::new(),
         }
     }
+
+    pub fn step(&mut self, delta: std::time::Duration) {
+        self.mecha_world.set_timestep(delta.as_secs_f32());
+        self.mecha_world.step(
+            &mut self.geometry_world,
+            &mut self.bodies,
+            &mut self.colliders,
+            &mut self.joint_constraints,
+            &mut self.force_generators,
+        );
+    }
 }
 
 #[derive(Default, Debug)]
