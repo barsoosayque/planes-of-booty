@@ -8,8 +8,6 @@ pub struct DebugWindow {
 }
 impl UiBuilder for DebugWindow {
     fn build(&mut self, ui: &mut imgui::Ui) {
-        use log::debug;
-        debug!("selected: {:?}", self.selected_entity);
         Window::new(im_str!("Debug window"))
             .resizable(false)
             .size([300.0, 0.0], Condition::FirstUseEver)

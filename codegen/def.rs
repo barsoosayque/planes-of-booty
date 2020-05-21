@@ -2,7 +2,7 @@ use serde::{
     de::{self, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::collections::HashMap as Map;
+use std::collections::BTreeMap as Map;
 use std::fmt;
 
 #[derive(Deserialize, Default)]
@@ -27,6 +27,29 @@ pub enum PartValue {
     Bool(bool),
     Image(String),
     Faction(String),
+}
+
+pub fn get_view_from<'a>(
+    def: &'a EntityDef,
+    component_name: &str,
+    asset_part: &str,
+) -> Option<(&'a PartValue, &'a PartValue, &'a PartValue)> {
+    def.components.get(component_name).map(|comp| {
+        (
+            comp.parts.get(asset_part).expect(&format!(
+                "{} field is missing for component {} in {}",
+                asset_part, component_name, def.name
+            )),
+            comp.parts.get("width").expect(&format!(
+                "width field is missing component for {} in {}",
+                component_name, def.name
+            )),
+            comp.parts.get("height").expect(&format!(
+                "height field is missing component for {} in {}",
+                component_name, def.name
+            )),
+        )
+    })
 }
 
 impl std::fmt::Display for PartValue {

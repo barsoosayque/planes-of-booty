@@ -1,22 +1,38 @@
-use super::super::component::*;
+use super::{
+    super::{component::*, resource::*},
+    render_sprite,
+};
+use crate::assets::AssetManager;
+use crate::entity;
 use crate::math::*;
+use crate::ui::ImGuiSystem;
 use ggez::{graphics, Context};
-use specs::{Entities, Join, ReadStorage, System};
+use specs::{Entities, Join, Read, ReadStorage, System, Write};
 
-pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
-impl SpriteRenderSystem<'_> {
-    fn render_sprite(&mut self, sprite: &graphics::Image, pos: &Vec2f, size: &Size2f) {
-        let scale = Vec2f::new(
-            size.width / sprite.width() as f32,
-            size.height / sprite.height() as f32,
-        );
+pub struct UiRenderSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
+impl<'a> System<'a> for UiRenderSystem<'_> {
+    type SystemData = (Read<'a, UiHub>, Read<'a, Inputs>, Write<'a, AssetManager>);
 
-        let param = graphics::DrawParam::default()
-            .scale(scale)
-            .dest((pos.clone() - Vec2f::new(size.width * 0.5, size.height * 0.5)).to_point());
-        graphics::draw(self.0, sprite, param).unwrap();
+    fn run(&mut self, (ui_hub, inputs, mut assets): Self::SystemData) {
+        // spawn selected debug item under cursor
+        if let Some((sprite, width, height)) = ui_hub
+            .debug_window
+            .selected_entity
+            .and_then(|id| entity::view(id, self.0, &mut assets))
+        {
+            render_sprite(
+                self.0,
+                &sprite.0,
+                &inputs.mouse_pos.to_vector(),
+                &Size2f::new(width, height),
+            );
+        }
+
+        self.1.render(self.0);
     }
 }
+
+pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for SpriteRenderSystem<'_> {
     type SystemData = (
         ReadStorage<'a, Transform>,
@@ -34,7 +50,8 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
                 Direction::West => &sprite.west.0,
             };
 
-            self.render_sprite(
+            render_sprite(
+                self.0,
                 &img,
                 &transform.pos,
                 &Size2f::new(sprite.width, sprite.height),
@@ -42,7 +59,8 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         }
 
         for (transform, sprite) in (&transforms, &sprites).join() {
-            self.render_sprite(
+            render_sprite(
+                self.0,
                 &sprite.asset.0,
                 &transform.pos,
                 &Size2f::new(sprite.width, sprite.height),

@@ -16,9 +16,8 @@ fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
     let mut fn_gen = Function::new("spawn");
     fn_gen
         .arg("id", "&str")
-        .arg("world", "&mut specs::World")
-        .arg("ctx", "&mut ggez::Context")
-        .arg("assets", "&mut crate::assets::AssetManager");
+        .arg("world", "&specs::World")
+        .arg("ctx", "&mut ggez::Context");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
@@ -26,9 +25,37 @@ fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
     fn_gen.line("match id {");
     for def in defs {
         fn_gen.line(&format!(
-            "\"{}\" => spawn_{}(world, ctx, assets),",
+            "\"{}\" => spawn_{}(world, ctx),",
             def.name, def.name
         ));
+    }
+    fn_gen.line("_ => panic!(\"Unknown id for spawning an entity: {}\", id),");
+    fn_gen.line("}");
+    fn_gen
+}
+
+fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
+    let mut fn_gen = Function::new("view");
+    fn_gen
+        .arg("id", "&str")
+        .arg("ctx", "&mut ggez::Context")
+        .arg("assets", "&mut crate::assets::AssetManager");
+    fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, f32, f32)>");
+    fn_gen.vis("pub");
+    fn_gen.allow("dead_code");
+
+    fn_gen.line("match id {");
+    for def in defs {
+        let asset = get_view_from(def, "DirectionalSprite", "north")
+            .or(get_view_from(def, "Sprite", "asset"));
+
+        match asset {
+            Some(asset) => fn_gen.line(&format!(
+                "\"{}\" => Some(({}, {}, {})),",
+                def.name, asset.0, asset.1, asset.2
+            )),
+            None => fn_gen.line(&format!("\"{}\" => None,", def.name)),
+        };
     }
     fn_gen.line("_ => panic!(\"Unknown id for spawning an entity: {}\", id),");
     fn_gen.line("}");
@@ -38,15 +65,15 @@ fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
 fn generate_spawn_fn(def: &EntityDef) -> Function {
     let mut fn_gen = Function::new(&format!("spawn_{}", def.name));
     fn_gen
-        .arg("world", "&mut specs::World")
-        .arg("ctx", "&mut ggez::Context")
-        .arg("assets", "&mut crate::assets::AssetManager");
+        .arg("world", "&specs::World")
+        .arg("ctx", "&mut ggez::Context");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
 
     fn_gen.line("use specs::{WorldExt,world::Builder};");
-    fn_gen.line("world.create_entity()");
+    fn_gen.line("let mut assets = world.write_resource::<crate::assets::AssetManager>();");
+    fn_gen.line("world.create_entity_unchecked()");
     for tag in &def.tags {
         fn_gen.line(format!(".with(tag::{})", tag));
     }
@@ -119,6 +146,7 @@ fn main() {
         ));
     }
     scope.push_fn(generate_generic_spawn_fn(&defs));
+    scope.push_fn(generate_generic_view_fn(&defs));
     for def in &defs {
         scope.push_fn(generate_spawn_fn(&def));
     }

@@ -4,13 +4,10 @@ use std::any::Any;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>);
 
 impl AssetManager {
-    pub fn new() -> Self {
-        AssetManager(BTreeMap::new())
-    }
-
     pub fn get<A: Asset + 'static>(
         &mut self,
         key: &str,

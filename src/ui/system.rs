@@ -10,8 +10,9 @@ pub trait UiBuilder {
 }
 
 pub struct ImGuiSystem {
-    imgui: RefCell<imgui::Context>,
+    imgui: imgui::Context,
     renderer: RefCell<Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>>,
+    next_frame: RefCell<Option<imgui::Ui<'static>>>
 }
 
 impl ImGuiSystem {
@@ -38,16 +39,21 @@ impl ImGuiSystem {
         };
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
         Self {
-            imgui: RefCell::new(imgui),
+            imgui: imgui,
             renderer: RefCell::new(renderer),
+            next_frame: RefCell::new(None),
         }
     }
 
-    pub fn update(&mut self, ctx: &ggez::Context, delta: std::time::Duration) {
+    pub fn update<U: UiBuilder>(
+        &mut self,
+        ctx: &ggez::Context,
+        builder: &mut U,
+        delta: std::time::Duration,
+    ) -> bool {
         use ggez::input::mouse::{self, MouseButton};
 
-        let mut imgui = self.imgui.borrow_mut();
-        let mut io = imgui.io_mut();
+        let mut io = self.imgui.io_mut();
         let window = graphics::window(ctx);
 
         // it's very important to round so we don't get blurry image
@@ -75,23 +81,34 @@ impl ImGuiSystem {
         ];
 
         io.delta_time = delta.as_secs_f32();
+
+        let mut ui = self.imgui.frame();
+        builder.build(&mut ui);
+        let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
+
+        unsafe {
+            // bypass lifetime since it's not public and 
+            // limited to imgui context lifetime anyways
+            self.next_frame.replace(Some(std::mem::transmute(ui)));
+        }
+        
+        hovered
     }
 
-    pub fn render<U: UiBuilder>(&self, ctx: &mut ggez::Context, builder: &mut U) {
-        let mut imgui = self.imgui.borrow_mut();
-        let mut ui = imgui.frame();
-        builder.build(&mut ui);
-
-        let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);
-        let draw_data = ui.render();
-        self.renderer
-            .borrow_mut()
-            .render(
-                factory,
-                encoder,
-                &mut RenderTargetView::new(render_target),
-                &draw_data,
-            )
-            .unwrap();
+    pub fn render(&self, ctx: &mut ggez::Context) {
+        // consume next_frame and render it
+        if let Some(ui) = self.next_frame.borrow_mut().take() {
+            let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);
+            let draw_data = ui.render();
+            self.renderer
+                .borrow_mut()
+                .render(
+                    factory,
+                    encoder,
+                    &mut RenderTargetView::new(render_target),
+                    &draw_data,
+                )
+                .unwrap();
+        }
     }
 }

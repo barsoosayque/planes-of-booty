@@ -1,7 +1,7 @@
 use crate::assets::*;
-use crate::math::*;
 use crate::ecs::{component::*, resource::*, system::*, tag};
 use crate::entity;
+use crate::math::*;
 use crate::ui::ImGuiSystem;
 use ggez::event::EventHandler;
 use ggez::timer;
@@ -9,14 +9,23 @@ use ggez::{graphics, Context, GameResult};
 use specs::prelude::*;
 
 pub struct Game {
+    is_debug: bool,
     world: World,
     dispatcher: Dispatcher<'static, 'static>,
-    assets: AssetManager,
-    imgui: ImGuiSystem
+    imgui: ImGuiSystem,
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context) -> Game {
+    fn prespawn(&mut self) {
+        let queue = &mut self.world.write_resource::<SpawnQueue>().0;
+        queue.push_back(SpawnItem {
+            id: "player".into(),
+            pos: Point2f::new(300.0, 300.0),
+        });
+    }
+
+    pub fn new(ctx: &mut Context) -> Self {
+        let imgui = ImGuiSystem::new(ctx);
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
             .with(SearchForTargetSystem, "search_for_target_system", &[])
@@ -26,6 +35,8 @@ impl Game {
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
+        world.insert(SpawnQueue::default());
+        world.insert(AssetManager::default());
         world.register::<tag::Player>();
         world.register::<Movement>();
         world.register::<Transform>();
@@ -35,59 +46,77 @@ impl Game {
         world.register::<SearchForTarget>();
         world.register::<FollowTarget>();
         world.register::<Faction>();
-
         dispatcher.setup(&mut world);
 
-        let mut assets = AssetManager::new();
-
-        let player = entity::spawn_player(&mut world, ctx, &mut assets);
-        world.write_storage::<Transform>().insert(
-            player,
-            Transform {
-                pos: Vec2f::new(300.0, 300.0),
-                ..Transform::default()
-            },
-        ).unwrap();
-
-        entity::spawn_pirate_raft(&mut world, ctx, &mut assets);
-        
-        let imgui = ImGuiSystem::new(ctx);
-
-        Game {
+        let mut game = Self {
+            is_debug: false,
             world,
             dispatcher,
-            assets,
-            imgui
-        }
+            imgui,
+        };
+        game.prespawn();
+        game
     }
 }
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let delta = {
+        {
             // update delta time
             let mut delta = self.world.write_resource::<DeltaTime>();
             delta.0 = timer::delta(ctx);
-            delta.0
         };
 
         {
             // update inputs
+            use ggez::input::{keyboard, mouse};
             let mut inputs = self.world.write_resource::<Inputs>();
-            inputs.pressed_keys = ggez::input::keyboard::pressed_keys(ctx).to_owned();
+            inputs.pressed_keys = keyboard::pressed_keys(ctx).to_owned();
+            inputs.mouse_pos = Point2f::from(mouse::position(ctx));
+            let new_press: std::collections::HashSet<mouse::MouseButton> =
+                [mouse::MouseButton::Left, mouse::MouseButton::Right]
+                    .iter()
+                    .cloned()
+                    .filter(|btn| mouse::button_pressed(ctx, *btn))
+                    .collect();
+            inputs.mouse_clicked = inputs
+                .mouse_pressed
+                .difference(&new_press)
+                .cloned()
+                .collect();
+            inputs.mouse_pressed = new_press;
         }
 
+        // run ui system before any other system so it can
+        // consume input events
+        UiSystem(ctx, &mut self.imgui).run_now(&self.world);
         self.dispatcher.dispatch(&self.world);
+
+        // Systems can spawn entities using SpawnQueue resource
+        for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
+            let e = entity::spawn(&item.id, &self.world, ctx);
+            let transform = Transform {
+                pos: item.pos.to_vector(),
+                ..Transform::default()
+            };
+            self.world
+                .write_storage::<Transform>()
+                .insert(e, transform)
+                .unwrap();
+        }
+
         self.world.maintain();
-        self.imgui.update(ctx, delta);
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
+        if self.is_debug {
+            DebugRenderSystem(ctx).run_now(&self.world);
+        }
         SpriteRenderSystem(ctx).run_now(&self.world);
-        DebugRenderSystem(ctx).run_now(&self.world);
-        GameUiSystem(ctx, &mut self.imgui).run_now(&self.world);
+        UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
     }
 }
