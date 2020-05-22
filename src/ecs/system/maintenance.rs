@@ -1,16 +1,11 @@
 use super::super::{component::*, resource::*, tag};
-use crate::math::*;
-use crate::ui::system::ImGuiSystem;
+use crate::{math::*, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use specs::{Join, Read, System, Write, WriteStorage};
 
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
-    type SystemData = (
-        WriteStorage<'a, Movement>,
-        Read<'a, Inputs>,
-        WriteStorage<'a, tag::Player>,
-    );
+    type SystemData = (WriteStorage<'a, Movement>, Read<'a, Inputs>, WriteStorage<'a, tag::Player>);
 
     fn run(&mut self, (mut movements, inputs, tag): Self::SystemData) {
         for (movement, _) in (&mut movements, &tag).join() {
@@ -34,12 +29,7 @@ impl<'a> System<'a> for InputsSystem {
 
 pub struct UiSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiSystem<'_> {
-    type SystemData = (
-        Write<'a, SpawnQueue>,
-        Write<'a, UiHub>,
-        Write<'a, Inputs>,
-        Read<'a, DeltaTime>,
-    );
+    type SystemData = (Write<'a, SpawnQueue>, Write<'a, UiHub>, Write<'a, Inputs>, Read<'a, DeltaTime>);
 
     fn run(&mut self, (mut spawn_queue, mut ui_hub, mut inputs, delta): Self::SystemData) {
         use std::ops::DerefMut;
@@ -51,10 +41,7 @@ impl<'a> System<'a> for UiSystem<'_> {
         if let Some(id) = ui_hub.debug_window.selected_entity {
             if inputs.mouse_clicked.contains(&MouseButton::Left) {
                 log::debug!("Spawn {} using debug tools", id);
-                spawn_queue.0.push_back(SpawnItem {
-                    id: id.to_owned(),
-                    pos: inputs.mouse_pos,
-                });
+                spawn_queue.0.push_back(SpawnItem { id: id.to_owned(), pos: inputs.mouse_pos });
             } else if inputs.mouse_clicked.contains(&MouseButton::Right) {
                 ui_hub.debug_window.selected_entity = None;
             }

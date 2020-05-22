@@ -1,12 +1,16 @@
-use crate::math::{Point2f, Vec2f};
-use crate::ui::*;
+use crate::{
+    math::{Point2f, Vec2f},
+    ui::*,
+};
 use ggez::input;
-use nphysics2d::force_generator::DefaultForceGeneratorSet;
-use nphysics2d::joint::DefaultJointConstraintSet;
-use nphysics2d::object::{DefaultBodySet, DefaultColliderSet};
-use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
-use std::collections::HashSet;
-use std::collections::VecDeque as Queue;
+use nphysics2d::{
+    force_generator::DefaultForceGeneratorSet,
+    joint::DefaultJointConstraintSet,
+    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderSet, RigidBody},
+    world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
+};
+use specs::Entity;
+use std::collections::{HashSet, VecDeque as Queue};
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(pub std::time::Duration);
@@ -41,6 +45,24 @@ impl PhysicWorld {
             &mut self.joint_constraints,
             &mut self.force_generators,
         );
+    }
+
+    pub fn bodies_iter(&self) -> impl Iterator<Item = (Entity, &RigidBody<f32>)> {
+        self.bodies
+            .iter()
+            .filter_map(|b| b.1.downcast_ref::<RigidBody<f32>>())
+            .map(|b| (*b.user_data().unwrap().downcast_ref::<Entity>().unwrap(), b))
+    }
+
+    pub fn bodies_iter_mut(&mut self) -> impl Iterator<Item = (Entity, &mut RigidBody<f32>)> {
+        self.bodies
+            .iter_mut()
+            .filter_map(|b| b.1.downcast_mut::<RigidBody<f32>>())
+            .map(|b| (*b.user_data().unwrap().downcast_ref::<Entity>().unwrap(), b))
+    }
+
+    pub fn collides_iter(&self) -> impl Iterator<Item = (Entity, &Collider<f32, DefaultBodyHandle>)> {
+        self.colliders.iter().map(|c| (*c.1.user_data().unwrap().downcast_ref::<Entity>().unwrap(), c.1))
     }
 }
 

@@ -1,11 +1,11 @@
-use crate::assets::*;
-use crate::ecs::{component::*, resource::*, system::*, tag};
-use crate::entity;
-use crate::math::*;
-use crate::ui::ImGuiSystem;
-use ggez::event::EventHandler;
-use ggez::timer;
-use ggez::{graphics, Context, GameResult};
+use crate::{
+    assets::*,
+    ecs::{component::*, resource::*, system::*, tag},
+    entity,
+    math::*,
+    ui::ImGuiSystem,
+};
+use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
 use specs::prelude::*;
 
 pub struct Game {
@@ -17,10 +17,7 @@ pub struct Game {
 impl Game {
     fn prespawn(&mut self) {
         let queue = &mut self.world.write_resource::<SpawnQueue>().0;
-        queue.push_back(SpawnItem {
-            id: "player".into(),
-            pos: Point2f::new(300.0, 300.0),
-        });
+        queue.push_back(SpawnItem { id: "player".into(), pos: Point2f::new(300.0, 300.0) });
     }
 
     pub fn new(ctx: &mut Context) -> Self {
@@ -29,9 +26,11 @@ impl Game {
         let mut dispatcher = DispatcherBuilder::new()
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &[])
-            .with(MovementSystem, "movement_system", &[])
             .with(InputsSystem, "inputs_system", &[])
-            .with(PhysicSystem, "physic_system", &[])
+            .with(DirectionalSystem, "directional_system", &[])
+            .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
+            .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
+            .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -47,13 +46,10 @@ impl Game {
         world.register::<FollowTarget>();
         world.register::<Faction>();
         world.register::<Physic>();
+        world.register::<Directional>();
         dispatcher.setup(&mut world);
 
-        let mut game = Self {
-            world,
-            dispatcher,
-            imgui,
-        };
+        let mut game = Self { world, dispatcher, imgui };
         game.prespawn();
         game
     }
@@ -79,11 +75,7 @@ impl EventHandler for Game {
                     .cloned()
                     .filter(|btn| mouse::button_pressed(ctx, *btn))
                     .collect();
-            inputs.mouse_clicked = inputs
-                .mouse_pressed
-                .difference(&new_press)
-                .cloned()
-                .collect();
+            inputs.mouse_clicked = inputs.mouse_pressed.difference(&new_press).cloned().collect();
             inputs.mouse_pressed = new_press;
         }
 
@@ -95,14 +87,9 @@ impl EventHandler for Game {
         // Systems can spawn entities using SpawnQueue resource
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
             let e = entity::spawn(&item.id, &self.world, ctx);
-            let transform = Transform {
-                pos: item.pos.to_vector(),
-                ..Transform::default()
-            };
-            self.world
-                .write_storage::<Transform>()
-                .insert(e, transform)
-                .unwrap();
+            if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
+                transform.pos = item.pos.to_vector();
+            }
         }
 
         self.world.maintain();

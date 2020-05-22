@@ -7,7 +7,7 @@ build = "codegen/build.rs"
 
 [dependencies]
 ggez = "0.5.1"
-specs = { version = "0.16.1", features = ["specs-derive", "parallel"] }
+specs = { version = "0.16.1", features = ["specs-derive", "parallel", "storage-event-control"] }
 imgui = "0.3.0"
 imgui-gfx-renderer = "0.3.0"
 

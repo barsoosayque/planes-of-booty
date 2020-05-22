@@ -1,34 +1,24 @@
 use anyhow::Result;
 use codegen::*;
 use def::*;
-use std::fs;
-use std::collections::HashSet as Set;
+use std::{collections::BTreeSet as Set, fs};
 
 mod def;
 
 fn parse_entity_def(name: &str, data: &str) -> Result<EntityDef> {
-    Ok(EntityDef {
-        name: name.to_owned(),
-        ..serde_yaml::from_str::<EntityDef>(data)?
-    })
+    Ok(EntityDef { name: name.to_owned(), ..serde_yaml::from_str::<EntityDef>(data)? })
 }
 
 fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
     let mut fn_gen = Function::new("spawn");
-    fn_gen
-        .arg("id", "&str")
-        .arg("world", "&specs::World")
-        .arg("ctx", "&mut ggez::Context");
+    fn_gen.arg("id", "&str").arg("world", "&specs::World").arg("ctx", "&mut ggez::Context");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
 
     fn_gen.line("match id {");
     for def in defs {
-        fn_gen.line(&format!(
-            "\"{}\" => spawn_{}(world, ctx),",
-            def.name, def.name
-        ));
+        fn_gen.line(&format!("\"{}\" => spawn_{}(world, ctx),", def.name, def.name));
     }
     fn_gen.line("_ => panic!(\"Unknown id for spawning an entity: {}\", id),");
     fn_gen.line("}");
@@ -37,10 +27,7 @@ fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
 
 fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
     let mut fn_gen = Function::new("view");
-    fn_gen
-        .arg("id", "&str")
-        .arg("ctx", "&mut ggez::Context")
-        .arg("assets", "&mut crate::assets::AssetManager");
+    fn_gen.arg("id", "&str").arg("ctx", "&mut ggez::Context").arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, crate::math::Size2f)>");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
@@ -48,10 +35,7 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
     fn_gen.line("match id {");
     for def in defs {
         match get_view_from(def, "Sprite", "asset") {
-            Some(asset) => fn_gen.line(&format!(
-                "\"{}\" => Some(({}, {})),",
-                def.name, asset.0, asset.1
-            )),
+            Some(asset) => fn_gen.line(&format!("\"{}\" => Some(({}, {})),", def.name, asset.0, asset.1)),
             None => fn_gen.line(&format!("\"{}\" => None,", def.name)),
         };
     }
@@ -61,46 +45,59 @@ fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
 }
 
 fn generate_spawn_fn(def: &EntityDef) -> Function {
-    // recursivly collect inits
-    fn collect_init(part: &PartValue, buffer: &mut Set<String>) {
+    // recursivly collect inits and fins
+    fn collect_init_and_fin(part: &PartValue, buffers: &mut (Set<String>, Set<String>)) {
         if let Some(init) = part.initialize() {
-            buffer.insert(init);
+            buffers.0.insert(init);
+        }
+        if let Some(fin) = part.finalize() {
+            buffers.1.insert(fin);
         }
         match part {
-            PartValue::Seq(vec) => for part in vec {
-                collect_init(part, buffer);
+            PartValue::Seq(vec) => {
+                for part in vec {
+                    collect_init_and_fin(part, buffers);
+                }
             },
-            PartValue::Directional { north, east, west, south, } => {
-                collect_init(north, buffer);
-                collect_init(east, buffer);
-                collect_init(west, buffer);
-                collect_init(south, buffer);
+            PartValue::Directional { north, east, west, south } => {
+                collect_init_and_fin(north, buffers);
+                collect_init_and_fin(east, buffers);
+                collect_init_and_fin(west, buffers);
+                collect_init_and_fin(south, buffers);
             },
-            PartValue::Single { value } => collect_init(value, buffer),
-            PartValue::Collide { shape, ..  } => collect_init(shape, buffer),
-            _ => ()
+            PartValue::Single { value } => collect_init_and_fin(value, buffers),
+            PartValue::Collide { shape, .. } => collect_init_and_fin(shape, buffers),
+            _ => (),
         }
+    }
+    // collect unique initialize and finalize lines from sorted parts
+    let mut buffers: (Set<String>, Set<String>) = (Set::new(), Set::new());
+    let mut sorted_parts: Vec<&PartValue> =
+        def.components.values().flat_map(|contents| contents.parts.values()).collect();
+    sorted_parts.sort_unstable_by(|a, b| {
+        if a.is_dependent(b) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Less
+        }
+    });
+    for part in sorted_parts {
+        collect_init_and_fin(part, &mut buffers);
     }
 
     let mut fn_gen = Function::new(&format!("spawn_{}", def.name));
-    fn_gen
-        .arg("world", "&specs::World")
-        .arg("ctx", "&mut ggez::Context");
+    fn_gen.arg("world", "&specs::World").arg("ctx", "&mut ggez::Context");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
     fn_gen.allow("dead_code");
 
     fn_gen.line("use specs::{WorldExt,world::Builder};");
     fn_gen.line("let mut assets = world.write_resource::<crate::assets::AssetManager>();");
-    let mut buffer: Set<String> = Set::new();
-    for (_, part) in def.components.iter().flat_map(|(_, contents)| contents.parts.iter()) {
-        collect_init(part, &mut buffer);
-    }
-    for line in buffer {
+    for line in buffers.0 {
         fn_gen.line(&line);
     }
 
-    fn_gen.line("world.create_entity_unchecked()");
+    fn_gen.line("let entity = world.create_entity_unchecked()");
     for tag in &def.tags {
         fn_gen.line(format!(".with(tag::{})", tag));
     }
@@ -126,8 +123,12 @@ fn generate_spawn_fn(def: &EntityDef) -> Function {
 
         fn_gen.line(format!(".with({})", component));
     }
-    fn_gen.line(".build()");
+    fn_gen.line(".build();");
+    for line in buffers.1 {
+        fn_gen.line(&line);
+    }
 
+    fn_gen.line("entity");
     fn_gen
 }
 
@@ -151,14 +152,11 @@ fn main() {
             Ok(def) => {
                 println!("Success !");
                 defs.push(def);
-            }
+            },
             Err(err) => {
                 println!("Error !");
-                panic!(
-                    "Error while parsing entity definition file {:?}: {}",
-                    path, err
-                );
-            }
+                panic!("Error while parsing entity definition file {:?}: {}", path, err);
+            },
         }
     }
 

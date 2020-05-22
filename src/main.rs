@@ -5,19 +5,18 @@ use ggez::{
 };
 use log::info;
 
+#[macro_use]
+mod math;
+
 mod assets;
 mod ecs;
 mod entity;
 mod game;
-mod math;
 mod ui;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};
-    let colors = ColoredLevelConfig::default()
-        .info(Color::Blue)
-        .debug(Color::Green)
-        .trace(Color::BrightBlue);
+    let colors = ColoredLevelConfig::default().info(Color::Blue).debug(Color::Green).trace(Color::Magenta);
     fern::Dispatch::new()
         .format(move |out, message, record| {
             out.finish(format_args!(
@@ -29,7 +28,7 @@ pub fn setup_logging() -> Result<()> {
             ))
         })
         // Filter out unnecessary stuff
-        .level(log::LevelFilter::Debug)
+        .level(log::LevelFilter::Trace)
         .level_for("gfx", log::LevelFilter::Off)
         .level_for("gfx_device_gl", log::LevelFilter::Off)
         .level_for("gilrs", log::LevelFilter::Off)
@@ -39,11 +38,7 @@ pub fn setup_logging() -> Result<()> {
 }
 
 fn run() -> Result<()> {
-    info!(
-        "Running {} v{}",
-        env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION")
-    );
+    info!("Running {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
     let (mut ctx, mut event_loop) = ContextBuilder::new("planes-of-booty", "")
         .window_setup(WindowSetup {

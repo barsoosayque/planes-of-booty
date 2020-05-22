@@ -1,29 +1,21 @@
-use euclid::{Point2D, UnknownUnit, Vector2D, Size2D};
+use euclid::{Angle, Point2D, Size2D, UnknownUnit, Vector2D};
 
+pub type Anglef = Angle<f32>;
 pub type Size2f = Size2D<f32, UnknownUnit>;
 pub type Vec2f = Vector2D<f32, UnknownUnit>;
 pub type Point2f = Point2D<f32, UnknownUnit>;
 #[derive(Default, Debug)]
 pub struct Circle2f {
     pub position: Point2f,
-    pub radius: f32
+    pub radius: f32,
 }
 impl Circle2f {
-    pub fn new(position: Point2f, radius: f32) -> Self {
-        Self { position, radius } 
-    }
+    pub fn new(position: Point2f, radius: f32) -> Self { Self { position, radius } }
 
-    pub fn contains(&self, p: Point2f) -> bool {
-        p.distance_to(self.position) < self.radius
-    }
+    pub fn contains(&self, p: Point2f) -> bool { p.distance_to(self.position) < self.radius }
 }
 
-#[inline]
-pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + t * (b - a)
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Direction {
     North,
     East,
@@ -32,9 +24,7 @@ pub enum Direction {
 }
 
 impl Default for Direction {
-    fn default() -> Self {
-        Self::North
-    }
+    fn default() -> Self { Self::North }
 }
 
 impl Direction {
@@ -51,16 +41,28 @@ impl Direction {
     pub fn from_vec2f(vec: &Vec2f) -> Self {
         if vec.x.abs() > vec.y.abs() {
             if vec.x > 0.0 {
-                Direction::East 
+                Direction::East
             } else {
                 Direction::West
             }
         } else {
             if vec.y > 0.0 {
-                Direction::South 
+                Direction::South
             } else {
                 Direction::North
             }
         }
     }
+}
+
+#[macro_export]
+macro_rules! directional {
+    ($v:expr => $north:expr, $east:expr, $south:expr, $west:expr) => {
+        match $v {
+            Direction::North => $north,
+            Direction::East => $east,
+            Direction::South => $south,
+            Direction::West => $west,
+        }
+    };
 }

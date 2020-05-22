@@ -12,7 +12,7 @@ pub trait UiBuilder {
 pub struct ImGuiSystem {
     imgui: imgui::Context,
     renderer: RefCell<Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>>,
-    next_frame: RefCell<Option<imgui::Ui<'static>>>
+    next_frame: RefCell<Option<imgui::Ui<'static>>>,
 }
 
 impl ImGuiSystem {
@@ -38,19 +38,10 @@ impl ImGuiSystem {
             }
         };
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
-        Self {
-            imgui: imgui,
-            renderer: RefCell::new(renderer),
-            next_frame: RefCell::new(None),
-        }
+        Self { imgui: imgui, renderer: RefCell::new(renderer), next_frame: RefCell::new(None) }
     }
 
-    pub fn update<U: UiBuilder>(
-        &mut self,
-        ctx: &ggez::Context,
-        builder: &mut U,
-        delta: std::time::Duration,
-    ) -> bool {
+    pub fn update<U: UiBuilder>(&mut self, ctx: &ggez::Context, builder: &mut U, delta: std::time::Duration) -> bool {
         use ggez::input::mouse::{self, MouseButton};
 
         let mut io = self.imgui.io_mut();
@@ -61,15 +52,12 @@ impl ImGuiSystem {
         io.display_framebuffer_scale = [hidpi_factor as f32, hidpi_factor as f32];
         if let Some(logical_size) = window.get_inner_size() {
             // convert size using our rounded hidpi factor
-            let rounded_size = logical_size
-                .to_physical(window.get_hidpi_factor())
-                .to_logical(hidpi_factor);
+            let rounded_size = logical_size.to_physical(window.get_hidpi_factor()).to_logical(hidpi_factor);
             io.display_size = [rounded_size.width as f32, rounded_size.height as f32];
         }
 
-        let rounded_position = Point2f::from(ggez::input::mouse::position(ctx))
-            * window.get_hidpi_factor() as f32
-            / hidpi_factor as f32;
+        let rounded_position =
+            Point2f::from(ggez::input::mouse::position(ctx)) * window.get_hidpi_factor() as f32 / hidpi_factor as f32;
         io.mouse_pos = [rounded_position.x as f32, rounded_position.y as f32];
 
         io.mouse_down = [
@@ -87,11 +75,11 @@ impl ImGuiSystem {
         let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
 
         unsafe {
-            // bypass lifetime since it's not public and 
+            // bypass lifetime since it's not public and
             // limited to imgui context lifetime anyways
             self.next_frame.replace(Some(std::mem::transmute(ui)));
         }
-        
+
         hovered
     }
 
@@ -102,12 +90,7 @@ impl ImGuiSystem {
             let draw_data = ui.render();
             self.renderer
                 .borrow_mut()
-                .render(
-                    factory,
-                    encoder,
-                    &mut RenderTargetView::new(render_target),
-                    &draw_data,
-                )
+                .render(factory, encoder, &mut RenderTargetView::new(render_target), &draw_data)
                 .unwrap();
         }
     }

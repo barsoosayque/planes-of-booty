@@ -1,12 +1,19 @@
-use crate::assets::*;
-use crate::math::{Size2f, Vec2f};
-use nphysics2d::{
-    object::{DefaultBodyHandle, DefaultColliderHandle},
-    ncollide2d::shape::ShapeHandle,
+use crate::{
+    assets::*,
+    math::{Direction, Size2f, Vec2f},
 };
-use specs::{Component, Entity, VecStorage};
-use std::collections::HashSet as Set;
-use std::sync::Arc;
+use nphysics2d::{
+    ncollide2d::shape::ShapeHandle,
+    object::{DefaultBodyHandle, DefaultColliderHandle},
+};
+use specs::{Component, Entity, FlaggedStorage, VecStorage};
+use std::{collections::HashSet as Set, sync::Arc};
+
+#[derive(Default, Debug, Component)]
+#[storage(FlaggedStorage)]
+pub struct Directional {
+    pub direction: Direction,
+}
 
 #[derive(Component)]
 #[storage(VecStorage)]
@@ -14,7 +21,7 @@ pub struct Physic {
     pub body: DefaultBodyHandle,
     pub collide: (DefaultColliderHandle, CollideShapeHandle),
 }
-type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
+pub type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
@@ -49,7 +56,7 @@ pub enum FactionId {
 }
 
 #[derive(Default, Debug, Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct Transform {
     pub pos: Vec2f,
     pub rotation: f32,
@@ -59,12 +66,12 @@ pub struct Transform {
 #[storage(VecStorage)]
 pub struct Movement {
     pub velocity: Vec2f,
-    pub acceleration: Vec2f,
+
     pub target_acceleration_normal: Vec2f,
 
     pub max_velocity: f32,
     pub acceleration_flat: f32,
-    pub acceleration_change_throttle: f32,
+    pub steering_difficulty: f32,
 }
 
 #[derive(Debug, Component)]
@@ -77,13 +84,6 @@ pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 
 #[derive(Debug)]
 pub enum DirOrSingle<T> {
-    Single {
-        value: T,
-    },
-    Directional {
-        north: T,
-        east: T,
-        south: T,
-        west: T,
-    },
+    Single { value: T },
+    Directional { north: T, east: T, south: T, west: T },
 }
