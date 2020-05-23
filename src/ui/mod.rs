@@ -4,4 +4,4 @@ pub mod system;
 
 pub use debug::DebugWindow;
 pub use menu::Menu;
-pub use system::{ImGuiSystem, UiBuilder};
+pub use system::{ImGuiSystem, UiBuilder, TextureProvider};

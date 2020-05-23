@@ -87,21 +87,27 @@ pub struct UiHub {
     pub debug_window: DebugWindow,
 }
 impl<'a> UiBuilder<'a> for UiHub {
-    type Data = (&'a mut Settings, &'a mut SpawnQueue);
+    type Data = (&'a Entity, &'a mut Settings, &'a mut SpawnQueue);
 
-    fn build(&mut self, ui: &mut imgui::Ui, (settings, queue): Self::Data) {
-        self.menu.build(ui, settings);
+    fn build(
+        &mut self,
+        ui: &mut imgui::Ui,
+        tex: &mut TextureProvider<'a>,
+        (player, settings, spawn_queue): Self::Data,
+    ) {
+        self.menu.build(ui, tex, settings);
 
         if self.menu.is_show_spawn_window {
-            self.debug_window.build(ui, ());
+            self.debug_window.build(ui, tex, (player, spawn_queue));
         }
     }
 }
 
 #[derive(Default, Debug)]
 pub struct SpawnQueue(pub Queue<SpawnItem>);
-#[derive(Default, Debug)]
-pub struct SpawnItem {
-    pub id: String,
-    pub pos: Point2f,
+
+#[derive(Debug)]
+pub enum SpawnItem {
+    Entity(String, Point2f),
+    Item(String, u32, Entity),
 }

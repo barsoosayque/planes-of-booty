@@ -1,5 +1,13 @@
-use crate::math::Point2f;
-use gfx::{format::Rgba8, handle::RenderTargetView, memory::Typed};
+use crate::{
+    assets::{Asset, ImageAsset},
+    math::Point2f,
+};
+use gfx::{
+    format::Rgba8,
+    handle::{RenderTargetView, ShaderResourceView},
+    memory::Typed,
+    Factory,
+};
 use ggez::graphics::{self, BackendSpec, GlBackendSpec};
 use imgui;
 use imgui_gfx_renderer::*;
@@ -7,7 +15,26 @@ use std::cell::RefCell;
 
 pub trait UiBuilder<'a> {
     type Data;
-    fn build(&mut self, ui: &mut imgui::Ui, data: Self::Data);
+    fn build(&mut self, ui: &mut imgui::Ui, tex: &mut TextureProvider<'a>, data: Self::Data);
+}
+
+pub struct TextureProvider<'a>(
+    &'a mut Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>,
+    &'a mut <GlBackendSpec as BackendSpec>::Factory,
+);
+impl<'a> TextureProvider<'a> {
+    fn get_texture_id_for(&mut self, asset: &ImageAsset) -> imgui::TextureId {
+        let id = imgui::TextureId::from(asset.id() as usize);
+        if self.0.textures().get(id).is_some() {
+            return id;
+        }
+
+        log::debug!("Associating a new ImageAsset with Imgui: {:?}", id);
+        let resource_view = ShaderResourceView::new(asset.as_ref().raw_shader_resource_view().to_owned());
+        let sampler = self.1.create_sampler(*asset.as_ref().sampler_info());
+        self.0.textures().replace(id, (resource_view, sampler));
+        id
+    }
 }
 
 pub struct ImGuiSystem {
@@ -39,10 +66,20 @@ impl ImGuiSystem {
             }
         };
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
-        Self { imgui: imgui, renderer: RefCell::new(renderer), next_frame: RefCell::new(None) }
+        Self {
+            imgui: imgui,
+            renderer: RefCell::new(renderer),
+            next_frame: RefCell::new(None),
+        }
     }
 
-    pub fn update<'a, D, B>(&mut self, ctx: &ggez::Context, delta: std::time::Duration, builder: &mut B, data: D) -> bool
+    pub fn update<'a, D, B>(
+        &'a mut self,
+        ctx: &'a mut ggez::Context,
+        delta: std::time::Duration,
+        builder: &mut B,
+        data: D,
+    ) -> bool
     where
         B: UiBuilder<'a, Data = D>,
     {
@@ -75,7 +112,9 @@ impl ImGuiSystem {
         io.delta_time = delta.as_secs_f32();
 
         let mut ui = self.imgui.frame();
-        builder.build(&mut ui, data);
+        let (factory, _, _, _, _) = graphics::gfx_objects(ctx);
+        let mut tex = TextureProvider(self.renderer.get_mut(), factory);
+        builder.build(&mut ui, &mut tex, data);
         let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
 
         unsafe {

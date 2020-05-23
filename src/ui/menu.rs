@@ -1,4 +1,4 @@
-use super::system::UiBuilder;
+use super::system::{TextureProvider, UiBuilder};
 use crate::ecs::resource::Settings;
 use imgui::*;
 
@@ -10,7 +10,7 @@ pub struct Menu {
 impl<'a> UiBuilder<'a> for Menu {
     type Data = &'a mut Settings;
 
-    fn build(&mut self, ui: &mut imgui::Ui, settings: Self::Data) {
+    fn build(&mut self, ui: &mut imgui::Ui, _: &mut TextureProvider<'a>, settings: Self::Data) {
         ui.main_menu_bar(|| {
             if ui.small_button(im_str!("Inventory")) {
                 self.is_show_inventory = true;
