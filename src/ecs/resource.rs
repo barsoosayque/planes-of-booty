@@ -61,7 +61,7 @@ impl PhysicWorld {
             .map(|b| (*b.user_data().unwrap().downcast_ref::<Entity>().unwrap(), b))
     }
 
-    pub fn collides_iter(&self) -> impl Iterator<Item = (Entity, &Collider<f32, DefaultBodyHandle>)> {
+    pub fn _collides_iter(&self) -> impl Iterator<Item = (Entity, &Collider<f32, DefaultBodyHandle>)> {
         self.colliders.iter().map(|c| (*c.1.user_data().unwrap().downcast_ref::<Entity>().unwrap(), c.1))
     }
 }

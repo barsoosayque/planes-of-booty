@@ -1,4 +1,6 @@
 components:
+    Inventory:
+        __default: true
     Sprite:
         asset:
             north: { image: "/sprites/ship-north.png" }

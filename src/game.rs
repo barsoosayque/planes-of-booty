@@ -47,6 +47,9 @@ impl Game {
         world.register::<Faction>();
         world.register::<Physic>();
         world.register::<Directional>();
+        world.register::<Inventory>();
+        world.register::<Named>();
+        world.register::<Quality>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };

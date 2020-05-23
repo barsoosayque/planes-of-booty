@@ -19,7 +19,7 @@ components:
         steering_difficulty: 1.0
         __default: true
     SearchForTarget:
-        from_factions: [ { faction: "Good" } ]
+        from_factions: [ { faction: "good" } ]
         radius: 200.0
     FollowTarget:
         keep_distance: 80.0
@@ -29,4 +29,4 @@ components:
     Transform:
         __default: true
     Faction:
-        id: { faction: "Pirates" }
+        id: { faction: "pirates" }

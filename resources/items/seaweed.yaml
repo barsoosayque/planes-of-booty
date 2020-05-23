@@ -1,0 +1,11 @@
+# Essentially, a trash item
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/seaweed.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Seaweed"
+        description: "Green sea plant, usable for pratically nothing."
+    Quality:
+        rarity: { rarity: "Common" }

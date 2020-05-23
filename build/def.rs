@@ -29,6 +29,7 @@ pub enum PartValue {
     Bool(bool),
     Image(String),
     Faction(String),
+    Rarity(String),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
     Single { value: Box<PartValue> },
     Size { width: f32, height: f32 },
@@ -46,11 +47,12 @@ impl std::fmt::Display for PartValue {
                 "vec![{}].drain(..).collect()",
                 vec.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(",")
             ),
-            PartValue::Str(value) => write!(f, "{}", value),
+            PartValue::Str(value) => write!(f, "\"{}\"", value),
             PartValue::Num(value) => write!(f, "{}f32", value),
             PartValue::Bool(value) => write!(f, "{}", value),
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
-            PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction),
+            PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
+            PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
             PartValue::Directional { north, east, south, west } => write!(
                 f,
                 "component::DirOrSingle::Directional{{north:{},east:{},south:{},west:{}}}",
@@ -78,9 +80,9 @@ impl PartValue {
     pub fn initialize(&self) -> Option<String> {
         match self {
             PartValue::Body { mass, status } => Some(format!(
-                "let body = world.write_resource::<resource::PhysicWorld>()
-                    .bodies.insert(nphysics2d::object::RigidBodyDesc::new()
-                        .mass({}f32).status(nphysics2d::object::BodyStatus::{}).build()
+                "let body = world.write_resource::<resource::PhysicWorld>()\
+                    .bodies.insert(nphysics2d::object::RigidBodyDesc::new()\
+                        .mass({}f32).status(nphysics2d::object::BodyStatus::{}).build()\
                     );",
                 mass,
                 status.to_camel_case()
@@ -93,21 +95,21 @@ impl PartValue {
                 };
 
                 Some(format!(
-                    "let collider = world.write_resource::<resource::PhysicWorld>()
-                    .colliders.insert(nphysics2d::object::ColliderDesc::new({})
-                        .sensor({}).build(nphysics2d::object::BodyPartHandle(body, 0))
+                    "let collider = world.write_resource::<resource::PhysicWorld>()\
+                    .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
+                        .sensor({}).build(nphysics2d::object::BodyPartHandle(body, 0))\
                     );",
                     first_shape, sensor
                 ))
             },
             PartValue::Box { uuid, x, y, width, height } => Some(format!(
-                "let box_{} = nphysics2d::ncollide2d::shape::ShapeHandle::new(
-                        nphysics2d::ncollide2d::shape::ConvexPolygon::try_from_points(&[
-                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
-                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
-                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
-                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),
-                        ]).unwrap()
+                "let box_{} = nphysics2d::ncollide2d::shape::ShapeHandle::new(\
+                        nphysics2d::ncollide2d::shape::ConvexPolygon::try_from_points(&[\
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),\
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),\
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),\
+                            nphysics2d::nalgebra::Point2::new({}f32, {}f32),\
+                        ]).unwrap()\
                 );",
                 uuid.to_simple(),
                 x,
@@ -126,40 +128,18 @@ impl PartValue {
     pub fn finalize(&self) -> Option<String> {
         match self {
             PartValue::Body { .. } => Some(
-                "world.write_resource::<resource::PhysicWorld>().bodies.rigid_body_mut(body).unwrap()
+                "world.write_resource::<resource::PhysicWorld>().bodies.rigid_body_mut(body).unwrap()\
                     .set_user_data(Some(Box::new(entity)));"
                     .into(),
             ),
             PartValue::Collide { .. } => Some(
-                "world.write_resource::<resource::PhysicWorld>().colliders.get_mut(collider).unwrap()
+                "world.write_resource::<resource::PhysicWorld>().colliders.get_mut(collider).unwrap()\
                     .set_user_data(Some(Box::new(entity)));"
                     .into(),
             ),
             _ => None,
         }
     }
-}
-
-pub fn get_view_from<'a>(
-    def: &'a EntityDef,
-    component_name: &str,
-    asset_part: &str,
-) -> Option<(&'a PartValue, &'a PartValue)> {
-    def.components.get(component_name).map(|comp| {
-        (
-            comp.parts
-                .get(asset_part)
-                .map(|part| match part {
-                    PartValue::Single { value } => value.as_ref(),
-                    PartValue::Directional { north, .. } => north.as_ref(),
-                    _ => panic!("{} should be either single or directional", component_name),
-                })
-                .expect(&format!("{} field is missing for component {} in {}", asset_part, component_name, def.name)),
-            comp.parts
-                .get("size")
-                .expect(&format!("width field is missing component for {} in {}", component_name, def.name)),
-        )
-    })
 }
 
 struct ComponentDefVisitor;
@@ -220,6 +200,7 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             match (key.as_ref(), value) {
                 ("image", PartValue::Str(value)) => return Ok(PartValue::Image(value)),
                 ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
+                ("rarity", PartValue::Str(value)) => return Ok(PartValue::Rarity(value)),
                 (key, value) => {
                     buffer.insert(key.to_owned(), value);
                 },

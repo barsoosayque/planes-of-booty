@@ -12,6 +12,7 @@ mod assets;
 mod ecs;
 mod entity;
 mod game;
+mod item;
 mod ui;
 
 pub fn setup_logging() -> Result<()> {

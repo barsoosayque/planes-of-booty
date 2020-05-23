@@ -3,7 +3,7 @@ name = "planes-of-booty"
 version = "0.1.0"
 authors = ["barsoosayque <shtoshich@gmail.com>"]
 edition = "2018"
-build = "codegen/build.rs"
+build = "build/build.rs"
 
 [dependencies]
 ggez = "0.5.1"
