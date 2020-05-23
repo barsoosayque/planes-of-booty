@@ -29,11 +29,12 @@ impl<'a> System<'a> for InputsSystem {
 
 pub struct UiSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiSystem<'_> {
-    type SystemData = (Write<'a, SpawnQueue>, Write<'a, UiHub>, Write<'a, Inputs>, Read<'a, DeltaTime>);
+    type SystemData =
+        (Write<'a, SpawnQueue>, Write<'a, UiHub>, Write<'a, Inputs>, Write<'a, Settings>, Read<'a, DeltaTime>);
 
-    fn run(&mut self, (mut spawn_queue, mut ui_hub, mut inputs, delta): Self::SystemData) {
+    fn run(&mut self, (mut spawn_queue, mut ui_hub, mut inputs, mut settings, delta): Self::SystemData) {
         use std::ops::DerefMut;
-        let consume = self.1.update(self.0, ui_hub.deref_mut(), delta.0);
+        let consume = self.1.update(self.0, delta.0, ui_hub.deref_mut(), (&mut settings, &mut spawn_queue));
         if consume {
             inputs.mouse_clicked.remove(&MouseButton::Left);
         }

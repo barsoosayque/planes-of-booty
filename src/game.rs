@@ -36,6 +36,7 @@ impl Game {
         world.insert(UiHub::default());
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
+        world.insert(Settings::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<Movement>();
@@ -101,16 +102,16 @@ impl EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let ui_hub = self.world.read_resource::<UiHub>();
+        let settings = self.world.read_resource::<Settings>();
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
-        if ui_hub.menu.is_debug_info {
+        if settings.is_debug_info {
             DebugInfoRenderSystem(ctx).run_now(&self.world);
         }
-        if ui_hub.menu.is_debug_targeting {
+        if settings.is_debug_targeting {
             DebugTargetRenderSystem(ctx).run_now(&self.world);
         }
         SpriteRenderSystem(ctx).run_now(&self.world);
-        if ui_hub.menu.is_debug_physic {
+        if settings.is_debug_physic {
             DebugPhysicRenderSystem(ctx).run_now(&self.world);
         }
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);

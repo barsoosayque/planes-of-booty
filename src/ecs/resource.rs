@@ -75,16 +75,25 @@ pub struct Inputs {
 }
 
 #[derive(Default, Debug)]
+pub struct Settings {
+    pub is_debug_info: bool,
+    pub is_debug_targeting: bool,
+    pub is_debug_physic: bool,
+}
+
+#[derive(Default, Debug)]
 pub struct UiHub {
     pub menu: Menu,
     pub debug_window: DebugWindow,
 }
-impl UiBuilder for UiHub {
-    fn build(&mut self, ui: &mut imgui::Ui) {
-        self.menu.build(ui);
+impl<'a> UiBuilder<'a> for UiHub {
+    type Data = (&'a mut Settings, &'a mut SpawnQueue);
+
+    fn build(&mut self, ui: &mut imgui::Ui, (settings, queue): Self::Data) {
+        self.menu.build(ui, settings);
 
         if self.menu.is_show_spawn_window {
-            self.debug_window.build(ui);
+            self.debug_window.build(ui, ());
         }
     }
 }

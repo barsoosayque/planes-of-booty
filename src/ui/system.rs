@@ -5,8 +5,9 @@ use imgui;
 use imgui_gfx_renderer::*;
 use std::cell::RefCell;
 
-pub trait UiBuilder {
-    fn build(&mut self, ui: &mut imgui::Ui);
+pub trait UiBuilder<'a> {
+    type Data;
+    fn build(&mut self, ui: &mut imgui::Ui, data: Self::Data);
 }
 
 pub struct ImGuiSystem {
@@ -41,7 +42,10 @@ impl ImGuiSystem {
         Self { imgui: imgui, renderer: RefCell::new(renderer), next_frame: RefCell::new(None) }
     }
 
-    pub fn update<U: UiBuilder>(&mut self, ctx: &ggez::Context, builder: &mut U, delta: std::time::Duration) -> bool {
+    pub fn update<'a, D, B>(&mut self, ctx: &ggez::Context, delta: std::time::Duration, builder: &mut B, data: D) -> bool
+    where
+        B: UiBuilder<'a, Data = D>,
+    {
         use ggez::input::mouse::{self, MouseButton};
 
         let mut io = self.imgui.io_mut();
@@ -71,7 +75,7 @@ impl ImGuiSystem {
         io.delta_time = delta.as_secs_f32();
 
         let mut ui = self.imgui.frame();
-        builder.build(&mut ui);
+        builder.build(&mut ui, data);
         let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
 
         unsafe {
