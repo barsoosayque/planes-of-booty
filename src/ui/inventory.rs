@@ -28,10 +28,7 @@ impl<'a> InventoryWindow {
 
                 let count = ImString::from(format!("{}", count));
                 let [text_width, text_height] = ui.calc_text_size(&count, false, 0.0);
-                ui.set_cursor_pos([
-                    Self::CELL + pos[0] - text_width,
-                    Self::CELL + pos[1] - text_height,
-                ]);
+                ui.set_cursor_pos([Self::CELL + pos[0] - text_width, Self::CELL + pos[1] - text_height]);
                 ui.text(&count);
                 grp.end(ui);
 
@@ -41,7 +38,16 @@ impl<'a> InventoryWindow {
                             ui.bullet_text(&ImString::new(named.name));
                             ui.text(&named.description);
                         }
+                        if let Some(weapon) = data.weapons.get(*item) {
+                            ui.spacing();
+                            ui.text_colored([0.73, 0.47, 0.38, 1.0], im_str!("Weapon stats:"));
+                            ui.text(&ImString::new(&format!(
+                                "Damage: {} | Clip size: {} | Reloading time: {:.2} sec",
+                                weapon.damage, weapon.clip_size, weapon.reloading_time
+                            )));
+                        }
                         if let Some(quality) = data.qualities.get(*item) {
+                            ui.spacing();
                             let color = match quality.rarity {
                                 Rarity::Common => [0.33, 0.33, 0.33, 1.0],
                                 Rarity::Rare => [0.06, 0.39, 0.53, 1.0],

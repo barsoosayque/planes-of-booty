@@ -1,0 +1,19 @@
+# Essentially, a trash item
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/slingshot.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Slignshot"
+        description: "Worlds most basic weapon."
+    Quality:
+        rarity: { rarity: "Common" }
+    Weapon:
+        projectile_asset: { image: "/sprites/simple_projectile.png" }
+        projectile_velocity: 200.0
+        projectile_lifetime: 2.5
+        damage: 5
+        clip_size: 1
+        reloading_time: 0.5
+        accuracy: 0.8

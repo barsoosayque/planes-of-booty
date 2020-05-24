@@ -91,6 +91,7 @@ pub struct UiData<'a> {
     pub sprites: ReadStorage<'a, Sprite>,
     pub named: ReadStorage<'a, Named>,
     pub qualities: ReadStorage<'a, Quality>,
+    pub weapons: ReadStorage<'a, Weapon>,
     pub spawn_queue: Write<'a, SpawnQueue>,
     pub inputs: Write<'a, Inputs>,
     pub settings: Write<'a, Settings>,

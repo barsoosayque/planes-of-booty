@@ -1,0 +1,46 @@
+components:
+    Sprite:
+        asset:
+            north: { image: "/sprites/pirate-ship-blue-north.png" }
+            east: { image: "/sprites/pirate-ship-blue-east.png" }
+            south: { image: "/sprites/pirate-ship-blue-south.png" }
+            west: { image: "/sprites/pirate-ship-blue-west.png" }
+        size: { width: 80.0, height: 80.0 }
+    Physic:
+        body: 
+            status: "dynamic"
+            mass: 1.0
+        collide:
+            sensor: false
+            shape:
+                north:
+                    pos: { x: -10.0, y: -8.0 }
+                    size: { width: 22.0, height: 40.0 }
+                east: 
+                    pos: { x: -24.0, y: 6.0 }
+                    size: { width: 44.0, height: 18.0 }
+                south:
+                    pos: { x: -10.0, y: -18.0 }
+                    size: { width: 22.0, height: 40.0 }
+                west: 
+                    pos: { x: -20.0, y: 6.0 }
+                    size: { width: 44.0, height: 18.0 }
+    Movement:
+        max_velocity: 150.0
+        acceleration_flat: 200.0
+        steering_difficulty: 1.0
+        __default: true
+    SearchForTarget:
+        from_factions: [ { faction: "good" } ]
+        radius: 300.0
+    FollowTarget:
+        keep_distance: 150.0
+        follow_distance: 500.0
+    Target:
+        __default: true
+    Faction:
+        id: { faction: "pirates" }
+    Transform:
+        __default: true
+    Directional:
+        __default: true

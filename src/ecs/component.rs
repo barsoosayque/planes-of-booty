@@ -90,6 +90,18 @@ impl Default for Stackable {
     fn default() -> Self { Stackable { stack_size: 1 } }
 }
 
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Weapon {
+    pub projectile_asset: Arc<ImageAsset>,
+    pub projectile_velocity: f32,
+    pub projectile_lifetime: f32,
+    pub clip_size: u8,
+    pub damage: u32,
+    pub reloading_time: f32,
+    pub accuracy: f32,
+}
+
 /////////////
 // Physics //
 /////////////
