@@ -13,17 +13,13 @@ use imgui;
 use imgui_gfx_renderer::*;
 use std::cell::RefCell;
 
-pub trait UiBuilder<'a> {
-    type Data;
-    fn build(&mut self, ui: &mut imgui::Ui, tex: &mut TextureProvider<'a>, data: Self::Data);
+pub trait UiBuilder<D> {
+    fn build<'ctx>(&mut self, ui: &mut imgui::Ui, ctx: &mut UiContext<'ctx>, data: D);
 }
 
-pub struct TextureProvider<'a>(
-    &'a mut Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>,
-    &'a mut <GlBackendSpec as BackendSpec>::Factory,
-);
-impl<'a> TextureProvider<'a> {
-    fn get_texture_id_for(&mut self, asset: &ImageAsset) -> imgui::TextureId {
+pub struct UiContext<'ctx>(&'ctx mut Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>, &'ctx mut ggez::Context);
+impl UiContext<'_> {
+    pub fn get_texture_id_for(&mut self, asset: &ImageAsset) -> imgui::TextureId {
         let id = imgui::TextureId::from(asset.id() as usize);
         if self.0.textures().get(id).is_some() {
             return id;
@@ -31,10 +27,14 @@ impl<'a> TextureProvider<'a> {
 
         log::debug!("Associating a new ImageAsset with Imgui: {:?}", id);
         let resource_view = ShaderResourceView::new(asset.as_ref().raw_shader_resource_view().to_owned());
-        let sampler = self.1.create_sampler(*asset.as_ref().sampler_info());
+        let (factory, _, _, _, _) = graphics::gfx_objects(self.1);
+        let sampler = factory.create_sampler(*asset.as_ref().sampler_info());
         self.0.textures().replace(id, (resource_view, sampler));
         id
     }
+}
+impl AsMut<ggez::Context> for UiContext<'_> {
+    fn as_mut(&mut self) -> &mut ggez::Context { self.1 }
 }
 
 pub struct ImGuiSystem {
@@ -66,22 +66,18 @@ impl ImGuiSystem {
             }
         };
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
-        Self {
-            imgui: imgui,
-            renderer: RefCell::new(renderer),
-            next_frame: RefCell::new(None),
-        }
+        Self { imgui: imgui, renderer: RefCell::new(renderer), next_frame: RefCell::new(None) }
     }
 
-    pub fn update<'a, D, B>(
-        &'a mut self,
-        ctx: &'a mut ggez::Context,
+    pub fn update<D, B>(
+        &mut self,
+        ctx: &mut ggez::Context,
         delta: std::time::Duration,
         builder: &mut B,
         data: D,
     ) -> bool
     where
-        B: UiBuilder<'a, Data = D>,
+        B: UiBuilder<D>,
     {
         use ggez::input::mouse::{self, MouseButton};
 
@@ -112,9 +108,8 @@ impl ImGuiSystem {
         io.delta_time = delta.as_secs_f32();
 
         let mut ui = self.imgui.frame();
-        let (factory, _, _, _, _) = graphics::gfx_objects(ctx);
-        let mut tex = TextureProvider(self.renderer.get_mut(), factory);
-        builder.build(&mut ui, &mut tex, data);
+        let mut ctx = UiContext(self.renderer.get_mut(), ctx);
+        builder.build(&mut ui, &mut ctx, data);
         let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
 
         unsafe {

@@ -1,7 +1,7 @@
 use crate::{
     assets::*,
     ecs::{component::*, resource::*, system::*, tag},
-    entity,
+    entity, item,
     math::*,
     ui::ImGuiSystem,
 };
@@ -17,7 +17,7 @@ pub struct Game {
 impl Game {
     fn prespawn(&mut self) {
         let queue = &mut self.world.write_resource::<SpawnQueue>().0;
-        queue.push_back(SpawnItem { id: "player".into(), pos: Point2f::new(300.0, 300.0) });
+        queue.push_back(SpawnItem::Entity("player".into(), Point2f::new(300.0, 300.0)));
     }
 
     pub fn new(ctx: &mut Context) -> Self {
@@ -39,6 +39,7 @@ impl Game {
         world.insert(Settings::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
+        world.register::<Reflection>();
         world.register::<Movement>();
         world.register::<Transform>();
         world.register::<Sprite>();
@@ -51,6 +52,7 @@ impl Game {
         world.register::<Inventory>();
         world.register::<Named>();
         world.register::<Quality>();
+        world.register::<Stackable>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
@@ -88,11 +90,21 @@ impl EventHandler for Game {
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
         self.dispatcher.dispatch(&self.world);
 
-        // Systems can spawn entities using SpawnQueue resource
+        // Systems can spawn new stuff using SpawnQueue resource
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
-            let e = entity::spawn(&item.id, &self.world, ctx);
-            if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
-                transform.pos = item.pos.to_vector();
+            match item {
+                SpawnItem::Entity(id, pos) => {
+                    let e = entity::spawn(&id, &self.world, ctx);
+                    if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
+                        transform.pos = pos.to_vector();
+                    }
+                },
+                SpawnItem::Item(id, count, to_e) => {
+                    let e = item::spawn(&id, &self.world, ctx);
+                    if let Some(inventory) = self.world.write_storage::<Inventory>().get_mut(to_e) {
+                        inventory.content.add(&self.world, e, count);
+                    }
+                },
             }
         }
 

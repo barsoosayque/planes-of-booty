@@ -1,4 +1,6 @@
+use super::{component::*, tag};
 use crate::{
+    assets::AssetManager,
     math::{Point2f, Vec2f},
     ui::*,
 };
@@ -9,7 +11,7 @@ use nphysics2d::{
     object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderSet, RigidBody},
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
-use specs::Entity;
+use specs::prelude::*;
 use std::collections::{HashSet, VecDeque as Queue};
 
 #[derive(Default, Debug)]
@@ -81,25 +83,30 @@ pub struct Settings {
     pub is_debug_physic: bool,
 }
 
+#[derive(SystemData)]
+pub struct UiData<'a> {
+    pub entities: Entities<'a>,
+    pub player_tag: ReadStorage<'a, tag::Player>,
+    pub inventories: ReadStorage<'a, Inventory>,
+    pub sprites: ReadStorage<'a, Sprite>,
+    pub spawn_queue: Write<'a, SpawnQueue>,
+    pub inputs: Write<'a, Inputs>,
+    pub settings: Write<'a, Settings>,
+    pub assets: Write<'a, AssetManager>,
+}
 #[derive(Default, Debug)]
 pub struct UiHub {
     pub menu: Menu,
     pub debug_window: DebugWindow,
+    pub inventory_window: InventoryWindow,
 }
-impl<'a> UiBuilder<'a> for UiHub {
-    type Data = (&'a Entity, &'a mut Settings, &'a mut SpawnQueue);
-
-    fn build(
-        &mut self,
-        ui: &mut imgui::Ui,
-        tex: &mut TextureProvider<'a>,
-        (player, settings, spawn_queue): Self::Data,
-    ) {
-        self.menu.build(ui, tex, settings);
-
+impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
+    fn build<'ctx>(&mut self, ui: &mut imgui::Ui, ctx: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
+        self.menu.build(ui, ctx, data);
         if self.menu.is_show_spawn_window {
-            self.debug_window.build(ui, tex, (player, spawn_queue));
+            self.debug_window.build(ui, ctx, data);
         }
+        self.inventory_window.build(ui, ctx, data);
     }
 }
 

@@ -15,7 +15,7 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
         if let Some((sprite, size)) =
             ui_hub.debug_window.selected_entity.and_then(|id| entity::view(id, self.0, &mut assets))
         {
-            render_sprite(self.0, &sprite.0, &inputs.mouse_pos.to_vector(), &size);
+            render_sprite(self.0, &sprite, &inputs.mouse_pos.to_vector(), &size);
         }
 
         self.1.render(self.0);
@@ -31,12 +31,12 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         for (transform, movement, sprite) in (&transforms, &movements, &sprites).join() {
             match &sprite.asset {
                 SpriteAsset::Single { value } => {
-                    render_sprite(self.0, &value.0, &transform.pos, &sprite.size);
+                    render_sprite(self.0, &value, &transform.pos, &sprite.size);
                 },
                 SpriteAsset::Directional { north, east, south, west } => {
                     let img = directional! {
                         Direction::from_vec2f(&movement.velocity) =>
-                        &north.0, &east.0, &south.0, &west.0
+                        &north, &east, &south, &west
                     };
 
                     render_sprite(self.0, &img, &transform.pos, &sprite.size);

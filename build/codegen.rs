@@ -2,13 +2,13 @@ use crate::def::{EntityDef, PartValue};
 use codegen::*;
 use std::collections::BTreeSet as Set;
 
-pub fn generate_full(defs: &Vec<EntityDef>) -> String {
+pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> String {
     let mut scope = Scope::new();
     scope.raw(&generate_names_array(defs));
     scope.push_fn(generate_generic_spawn_fn(&defs));
     scope.push_fn(generate_generic_view_fn(&defs));
     for def in defs {
-        scope.push_fn(generate_spawn_fn(&def));
+        scope.push_fn(generate_spawn_fn(&def, group_name));
     }
     scope.to_string()
 }
@@ -101,7 +101,7 @@ fn collect_init_and_fin(part: &PartValue, buffers: &mut (Set<String>, Set<String
     }
 }
 
-pub fn generate_spawn_fn(def: &EntityDef) -> Function {
+pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
     // collect unique initialize and finalize lines from sorted parts
     let mut buffers: (Set<String>, Set<String>) = (Set::new(), Set::new());
     let mut sorted_parts: Vec<&PartValue> =
@@ -155,6 +155,7 @@ pub fn generate_spawn_fn(def: &EntityDef) -> Function {
 
         fn_gen.line(format!(".with({})", component));
     }
+    fn_gen.line(&format!(".with(component::Reflection{{id:\"{}_{}\"}})", reflection_prefix, def.name));
     fn_gen.line(".build();");
     for line in buffers.1 {
         fn_gen.line(&line);

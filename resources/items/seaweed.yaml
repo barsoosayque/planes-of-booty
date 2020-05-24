@@ -9,3 +9,5 @@ components:
         description: "Green sea plant, usable for pratically nothing."
     Quality:
         rarity: { rarity: "Common" }
+    Stackable:
+        stack_size: 4

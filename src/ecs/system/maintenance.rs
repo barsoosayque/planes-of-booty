@@ -1,7 +1,8 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{math::*, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
-use specs::{Join, Read, System, Write, WriteStorage};
+use specs::prelude::*;
+use std::ops::DerefMut;
 
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
@@ -28,23 +29,28 @@ impl<'a> System<'a> for InputsSystem {
 }
 
 pub struct UiSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
-impl<'a> System<'a> for UiSystem<'_> {
-    type SystemData =
-        (Write<'a, SpawnQueue>, Write<'a, UiHub>, Write<'a, Inputs>, Write<'a, Settings>, Read<'a, DeltaTime>);
+impl<'s> System<'s> for UiSystem<'_> {
+    type SystemData = (UiData<'s>, Read<'s, DeltaTime>, Write<'s, UiHub>);
 
-    fn run(&mut self, (mut spawn_queue, mut ui_hub, mut inputs, mut settings, delta): Self::SystemData) {
-        use std::ops::DerefMut;
-        let consume = self.1.update(self.0, delta.0, ui_hub.deref_mut(), (&mut settings, &mut spawn_queue));
-        if consume {
-            inputs.mouse_clicked.remove(&MouseButton::Left);
+    fn run(&mut self, (mut data, dt, mut hub): Self::SystemData) {
+        let (ctx, imgui) = (&mut self.0, &mut self.1);
+        if imgui.update(ctx, dt.0, hub.deref_mut(), &mut data) {
+            data.inputs.mouse_clicked.remove(&MouseButton::Left);
         }
 
-        if let Some(id) = ui_hub.debug_window.selected_entity {
-            if inputs.mouse_clicked.contains(&MouseButton::Left) {
+        if hub.menu.is_show_inventory {
+            if let Some((player, _)) = (&data.entities, &data.player_tag).join().next() {
+                hub.inventory_window.show_inventories_for.insert(player);
+            }
+            hub.menu.is_show_inventory = false;
+        }
+
+        if let Some(id) = hub.debug_window.selected_entity {
+            if data.inputs.mouse_clicked.contains(&MouseButton::Left) {
                 log::debug!("Spawn {} using debug tools", id);
-                spawn_queue.0.push_back(SpawnItem { id: id.to_owned(), pos: inputs.mouse_pos });
-            } else if inputs.mouse_clicked.contains(&MouseButton::Right) {
-                ui_hub.debug_window.selected_entity = None;
+                data.spawn_queue.0.push_back(SpawnItem::Entity(id.to_owned(), data.inputs.mouse_pos));
+            } else if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
+                hub.debug_window.selected_entity = None;
             }
         }
     }

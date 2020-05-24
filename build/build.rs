@@ -37,11 +37,11 @@ fn main() {
     fs::create_dir_all(format!("{}/generated/", out_dir)).unwrap();
 
     let (entities, entities_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/entities").unzip();
-    fs::write(format!("{}/generated/entity.rs", out_dir), codegen::generate_full(&entities)).unwrap();
+    fs::write(format!("{}/generated/entity.rs", out_dir), codegen::generate_full_group(&entities, "i")).unwrap();
     println!("Total entities generated: {}", entities.len());
 
     let (items, items_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/items").unzip();
-    fs::write(format!("{}/generated/item.rs", out_dir), codegen::generate_full(&items)).unwrap();
+    fs::write(format!("{}/generated/item.rs", out_dir), codegen::generate_full_group(&items, "i")).unwrap();
     println!("Total items generated: {}", entities.len());
 
     for path in entities_path {

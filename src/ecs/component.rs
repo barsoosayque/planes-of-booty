@@ -6,7 +6,7 @@ use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
-use specs::{Component, Entity, FlaggedStorage, VecStorage};
+use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
 use std::{collections::HashSet as Set, sync::Arc};
 
 /////////////////////////
@@ -16,19 +16,45 @@ use std::{collections::HashSet as Set, sync::Arc};
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Inventory {
-    pub content: Vec<ItemStack>,
+    pub content: Content,
 }
-#[derive(Debug)]
-pub struct ItemStack {
-    pub item: Entity,
-    pub size: u32
+#[derive(Default, Debug)]
+pub struct Content(Vec<(Entity, u32)>);
+impl Content {
+    pub fn add(&mut self, world: &World, item: Entity, count: u32) {
+        if count == 0 { return }
+        let (reflections, stacks) = (world.read_storage::<Reflection>(), world.read_storage::<Stackable>());
+        let stack_size = stacks.get(item).map(|s| s.stack_size).unwrap_or(1);
+        let id = reflections.get(item).unwrap().id;
+
+        let mut count_left = count;
+        for (e, stack) in &mut self.0 {
+            if reflections.get(*e).unwrap().id == id {
+                let transfer_count = (stack_size - *stack).max(0).min(count_left);
+                *stack += transfer_count;
+                count_left -= transfer_count;
+            }
+            if count_left <= 0 {
+                break;
+            }
+        }
+
+        while count_left > 0 {
+            let transfer_count = count_left.min(stack_size);
+            self.0.push((item, transfer_count)); 
+            count_left -= transfer_count;
+        }
+    }
+
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
+    pub fn iter(&self) -> impl Iterator<Item=&(Entity, u32)> { self.0.iter() }
 }
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Named {
     pub name: &'static str,
-    pub description: &'static str
+    pub description: &'static str,
 }
 
 #[derive(Debug, Component)]
@@ -38,13 +64,23 @@ pub struct Quality {
 }
 #[derive(Debug)]
 pub enum Rarity {
-    Common, Rare, Epic
+    Common,
+    Rare,
+    Epic,
+}
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Stackable {
+    pub stack_size: u32,
+}
+impl Default for Stackable {
+    fn default() -> Self { Stackable { stack_size: 1 } }
 }
 
 /////////////
 // Physics //
 /////////////
-
 
 #[derive(Component)]
 #[storage(VecStorage)]
@@ -124,6 +160,12 @@ pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 /////////////
 // Utility //
 /////////////
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Reflection {
+    pub id: &'static str,
+}
 
 #[derive(Debug)]
 pub enum DirOrSingle<T> {

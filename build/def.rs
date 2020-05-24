@@ -48,7 +48,7 @@ impl std::fmt::Display for PartValue {
                 vec.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(",")
             ),
             PartValue::Str(value) => write!(f, "\"{}\"", value),
-            PartValue::Num(value) => write!(f, "{}f32", value),
+            PartValue::Num(value) => write!(f, "num_traits::cast::AsPrimitive::as_({}f32)", value),
             PartValue::Bool(value) => write!(f, "{}", value),
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
@@ -79,6 +79,7 @@ impl PartValue {
 
     pub fn initialize(&self) -> Option<String> {
         match self {
+            // PartValue::Num(..) => Some("use std::convert::TryInto;".into()),
             PartValue::Body { mass, status } => Some(format!(
                 "let body = world.write_resource::<resource::PhysicWorld>()\
                     .bodies.insert(nphysics2d::object::RigidBodyDesc::new()\

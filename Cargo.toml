@@ -8,7 +8,7 @@ build = "build/build.rs"
 [dependencies]
 # using ggez with some patches to allow images to work with imgui
 ggez = { git = "https://github.com/barsoosayque/ggez.git" }
-specs = { version = "0.16.1", features = ["specs-derive", "parallel", "storage-event-control"] }
+specs = { version = "0.16.1", features = ["specs-derive", "shred-derive", "parallel", "storage-event-control"] }
 imgui = "0.3.0"
 imgui-gfx-renderer = "0.3.0"
 
