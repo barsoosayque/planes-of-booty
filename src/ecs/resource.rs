@@ -89,6 +89,8 @@ pub struct UiData<'a> {
     pub player_tag: ReadStorage<'a, tag::Player>,
     pub inventories: ReadStorage<'a, Inventory>,
     pub sprites: ReadStorage<'a, Sprite>,
+    pub named: ReadStorage<'a, Named>,
+    pub qualities: ReadStorage<'a, Quality>,
     pub spawn_queue: Write<'a, SpawnQueue>,
     pub inputs: Write<'a, Inputs>,
     pub settings: Write<'a, Settings>,

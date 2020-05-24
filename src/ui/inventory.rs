@@ -21,6 +21,7 @@ impl<'a> InventoryWindow {
                     Self::PAD + (Self::CELL + Self::PAD) * (i / per_row) as f32,
                 ];
                 ui.set_cursor_pos(pos);
+                let grp = ui.begin_group();
                 Image::new(ctx.get_texture_id_for(&value), [Self::CELL, Self::CELL])
                     .border_col([1.0, 1.0, 1.0, 0.3])
                     .build(ui);
@@ -32,6 +33,24 @@ impl<'a> InventoryWindow {
                     Self::CELL + pos[1] - text_height,
                 ]);
                 ui.text(&count);
+                grp.end(ui);
+
+                if ui.is_item_hovered_with_flags(ItemHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM) {
+                    ui.tooltip(|| {
+                        if let Some(named) = data.named.get(*item) {
+                            ui.bullet_text(&ImString::new(named.name));
+                            ui.text(&named.description);
+                        }
+                        if let Some(quality) = data.qualities.get(*item) {
+                            let color = match quality.rarity {
+                                Rarity::Common => [0.33, 0.33, 0.33, 1.0],
+                                Rarity::Rare => [0.06, 0.39, 0.53, 1.0],
+                                Rarity::Epic => [0.46, 0.16, 0.36, 1.0],
+                            };
+                            ui.text_colored(color, &format!("Rarity: {}", quality.rarity));
+                        }
+                    });
+                }
             } else {
                 log::warn!("There is no image for item {:?} ! (Shoulde be single asset in Sprite)", item);
             }

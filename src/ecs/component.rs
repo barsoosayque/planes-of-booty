@@ -7,7 +7,7 @@ use nphysics2d::{
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
 use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
-use std::{collections::HashSet as Set, sync::Arc};
+use std::{collections::HashSet as Set, fmt, sync::Arc};
 
 /////////////////////////
 // Inventory and Items //
@@ -22,7 +22,9 @@ pub struct Inventory {
 pub struct Content(Vec<(Entity, u32)>);
 impl Content {
     pub fn add(&mut self, world: &World, item: Entity, count: u32) {
-        if count == 0 { return }
+        if count == 0 {
+            return;
+        }
         let (reflections, stacks) = (world.read_storage::<Reflection>(), world.read_storage::<Stackable>());
         let stack_size = stacks.get(item).map(|s| s.stack_size).unwrap_or(1);
         let id = reflections.get(item).unwrap().id;
@@ -41,13 +43,14 @@ impl Content {
 
         while count_left > 0 {
             let transfer_count = count_left.min(stack_size);
-            self.0.push((item, transfer_count)); 
+            self.0.push((item, transfer_count));
             count_left -= transfer_count;
         }
     }
 
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
-    pub fn iter(&self) -> impl Iterator<Item=&(Entity, u32)> { self.0.iter() }
+
+    pub fn iter(&self) -> impl Iterator<Item = &(Entity, u32)> { self.0.iter() }
 }
 
 #[derive(Default, Debug, Component)]
@@ -67,6 +70,15 @@ pub enum Rarity {
     Common,
     Rare,
     Epic,
+}
+impl fmt::Display for Rarity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Rarity::Common => "Common",
+            Rarity::Rare => "Rare",
+            Rarity::Epic => "Epic",
+        })
+    }
 }
 
 #[derive(Debug, Component)]
