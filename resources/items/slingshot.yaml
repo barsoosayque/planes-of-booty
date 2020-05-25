@@ -2,7 +2,7 @@
 components:
     Sprite:
         asset:
-            single: { image: "/sprites/slingshot.png" }
+            single: { image: "/sprites/item/slingshot.png" }
         size: { width: 50.0, height: 50.0 }
     Named:
         name: "Slignshot"
@@ -10,7 +10,7 @@ components:
     Quality:
         rarity: { rarity: "Common" }
     Weapon:
-        projectile_asset: { image: "/sprites/simple_projectile.png" }
+        projectile_asset: { image: "/sprites/projectile/simple.png" }
         projectile_velocity: 200.0
         projectile_lifetime: 2.5
         damage: 5

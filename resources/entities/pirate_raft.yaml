@@ -1,7 +1,7 @@
 components:
     Sprite:
         asset:
-            single: { image: "/sprites/pirate-raft.png" }
+            single: { image: "/sprites/entity/pirate-raft.png" }
         size: { width: 30.0, height: 60.0 }
     Physic:
         body: 

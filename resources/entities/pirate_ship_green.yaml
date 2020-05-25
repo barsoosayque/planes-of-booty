@@ -1,10 +1,10 @@
 components:
     Sprite:
         asset:
-            north: { image: "/sprites/pirate-ship-green-north.png" }
-            east: { image: "/sprites/pirate-ship-green-east.png" }
-            south: { image: "/sprites/pirate-ship-green-south.png" }
-            west: { image: "/sprites/pirate-ship-green-west.png" }
+            north: { image: "/sprites/entity/pirate-ship-green-north.png" }
+            east: { image: "/sprites/entity/pirate-ship-green-east.png" }
+            south: { image: "/sprites/entity/pirate-ship-green-south.png" }
+            west: { image: "/sprites/entity/pirate-ship-green-west.png" }
         size: { width: 80.0, height: 80.0 }
     Physic:
         body: 

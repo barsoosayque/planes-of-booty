@@ -1,12 +1,10 @@
 components:
-    Inventory:
-        __default: true
     Sprite:
         asset:
-            north: { image: "/sprites/ship-north.png" }
-            east: { image: "/sprites/ship-east.png" }
-            south: { image: "/sprites/ship-south.png" }
-            west: { image: "/sprites/ship-west.png" }
+            north: { image: "/sprites/entity/ship-north.png" }
+            east: { image: "/sprites/entity/ship-east.png" }
+            south: { image: "/sprites/entity/ship-south.png" }
+            west: { image: "/sprites/entity/ship-west.png" }
         size: { width: 80.0, height: 80.0 }
     Physic:
         body: 
@@ -34,8 +32,8 @@ components:
         __default: true
     Faction:
         id: { faction: "Good" }
-    Transform:
-        __default: true
-    Directional:
-        __default: true
+    Weaponry: { __default: true }
+    Inventory: { __default: true }
+    Transform: { __default: true }
+    Directional: { __default: true }
 tags: ["Player"]

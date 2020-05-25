@@ -2,7 +2,7 @@
 components:
     Sprite:
         asset:
-            single: { image: "/sprites/seaweed.png" }
+            single: { image: "/sprites/item/seaweed.png" }
         size: { width: 50.0, height: 50.0 }
     Named:
         name: "Seaweed"
