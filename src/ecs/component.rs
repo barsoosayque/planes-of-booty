@@ -13,14 +13,26 @@ use std::{collections::HashSet as Set, fmt, sync::Arc};
 // Inventory and Items //
 /////////////////////////
 
+pub type ItemBox = Option<(Entity, u32)>;
+
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct Weaponry {
+    pub primary: ItemBox,
+    pub secondary: ItemBox
+}
+
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Inventory {
     pub content: Content,
 }
 #[derive(Default, Debug)]
-pub struct Content(Vec<(Entity, u32)>);
+pub struct Content(Vec<ItemBox>, Option<u32>);
 impl Content {
+    pub fn new() -> Self { Content::default() }
+    pub fn with_capacity(capacity: u32) -> Self { Content(Vec::default(), Some(capacity)) }
+
     pub fn add(&mut self, world: &World, item: Entity, count: u32) {
         if count == 0 {
             return;
@@ -30,7 +42,7 @@ impl Content {
         let id = reflections.get(item).unwrap().id;
 
         let mut count_left = count;
-        for (e, stack) in &mut self.0 {
+        for (e, stack) in self.0.iter_mut().filter_map(|i| i.as_mut()) {
             if reflections.get(*e).unwrap().id == id {
                 let transfer_count = (stack_size - *stack).max(0).min(count_left);
                 *stack += transfer_count;
@@ -42,15 +54,21 @@ impl Content {
         }
 
         while count_left > 0 {
+            if let Some(capacity) = self.1 {
+                if capacity > self.0.len() as u32 {
+                    break;
+                }
+            }
+
             let transfer_count = count_left.min(stack_size);
-            self.0.push((item, transfer_count));
+            self.0.push(Some((item, transfer_count)));
             count_left -= transfer_count;
         }
     }
 
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(Entity, u32)> { self.0.iter() }
+    pub fn iter(&self) -> impl Iterator<Item = &ItemBox> { self.0.iter() }
 }
 
 #[derive(Default, Debug, Component)]

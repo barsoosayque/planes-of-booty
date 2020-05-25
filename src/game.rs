@@ -54,6 +54,7 @@ impl Game {
         world.register::<Quality>();
         world.register::<Stackable>();
         world.register::<Weapon>();
+        world.register::<Weaponry>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };

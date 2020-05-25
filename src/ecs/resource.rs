@@ -88,6 +88,7 @@ pub struct UiData<'a> {
     pub entities: Entities<'a>,
     pub player_tag: ReadStorage<'a, tag::Player>,
     pub inventories: ReadStorage<'a, Inventory>,
+    pub weaponries: ReadStorage<'a, Weaponry>,
     pub sprites: ReadStorage<'a, Sprite>,
     pub named: ReadStorage<'a, Named>,
     pub qualities: ReadStorage<'a, Quality>,
