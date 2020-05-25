@@ -11,3 +11,4 @@ components:
         rarity: { rarity: "Common" }
     Stackable:
         stack_size: 4
+        __default: true

@@ -8,9 +8,14 @@ use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
 
 pub struct UiRenderSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiRenderSystem<'_> {
-    type SystemData = (Read<'a, UiHub>, Read<'a, Inputs>, Write<'a, AssetManager>);
+    type SystemData = (
+        ReadStorage<'a, Sprite>,
+        Read<'a, UiHub>,
+        Read<'a, Inputs>,
+        Write<'a, AssetManager>,
+    );
 
-    fn run(&mut self, (ui_hub, inputs, mut assets): Self::SystemData) {
+    fn run(&mut self, (sprites, ui_hub, inputs, mut assets): Self::SystemData) {
         // spawn selected debug item under cursor
         if let Some((sprite, size)) =
             ui_hub.debug_window.selected_entity.and_then(|id| entity::view(id, self.0, &mut assets))
@@ -19,6 +24,12 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
         }
 
         self.1.render(self.0);
+
+        if let Some(Sprite { asset: SpriteAsset::Single { value }, .. }) =
+            ui_hub.inventory_window.dragging_item().and_then(|item| sprites.get(item))
+        {
+            render_sprite(self.0, &value, &inputs.mouse_pos.to_vector(), &Size2f::new(50.0, 50.0));
+        }
     }
 }
 

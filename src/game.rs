@@ -31,6 +31,7 @@ impl Game {
             .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
             .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
+            .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -103,8 +104,11 @@ impl EventHandler for Game {
                 },
                 SpawnItem::Item(id, count, to_e) => {
                     let e = item::spawn(&id, &self.world, ctx);
+                    if let Some(stack) = self.world.write_storage::<Stackable>().get_mut(e) {
+                        stack.current = count;
+                    }
                     if let Some(inventory) = self.world.write_storage::<Inventory>().get_mut(to_e) {
-                        inventory.content.add(&self.world, e, count);
+                        inventory.content.add(&self.world, e);
                     }
                 },
             }

@@ -16,3 +16,21 @@ macro_rules! within_group {
         token.end($ui);
     };
 }
+
+#[macro_export]
+macro_rules! within_tooltip {
+    ($ui:expr => $block:block) => {
+        let token = $ui.begin_tooltip();
+        $block;
+        token.end($ui);
+    };
+}
+
+#[macro_export]
+macro_rules! styled {
+    ($style:expr, $ui:expr => $block:block) => {
+        let token = $ui.push_style_var($style);
+        $block;
+        token.pop($ui);
+    };
+}

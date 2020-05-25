@@ -13,13 +13,13 @@ use std::{collections::HashSet as Set, fmt, sync::Arc};
 // Inventory and Items //
 /////////////////////////
 
-pub type ItemBox = Option<(Entity, u32)>;
+pub type ItemBox = Option<Entity>;
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Weaponry {
     pub primary: ItemBox,
-    pub secondary: ItemBox
+    pub secondary: ItemBox,
 }
 
 #[derive(Default, Debug, Component)]
@@ -27,48 +27,65 @@ pub struct Weaponry {
 pub struct Inventory {
     pub content: Content,
 }
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Content(Vec<ItemBox>, Option<u32>);
+impl Default for Content {
+    fn default() -> Self { Content(vec![None], None) }
+}
 impl Content {
-    pub fn new() -> Self { Content::default() }
-    pub fn with_capacity(capacity: u32) -> Self { Content(Vec::default(), Some(capacity)) }
-
-    pub fn add(&mut self, world: &World, item: Entity, count: u32) {
-        if count == 0 {
-            return;
-        }
-        let (reflections, stacks) = (world.read_storage::<Reflection>(), world.read_storage::<Stackable>());
-        let stack_size = stacks.get(item).map(|s| s.stack_size).unwrap_or(1);
+    pub fn add(&mut self, world: &World, item: Entity) {
+        let (reflections, mut stacks) = (world.read_storage::<Reflection>(), world.write_storage::<Stackable>());
         let id = reflections.get(item).unwrap().id;
+        let (mut current, size) = stacks.get(item).map(|s| (s.current, s.stack_size)).unwrap_or((1, 1));
 
-        let mut count_left = count;
-        for (e, stack) in self.0.iter_mut().filter_map(|i| i.as_mut()) {
-            if reflections.get(*e).unwrap().id == id {
-                let transfer_count = (stack_size - *stack).max(0).min(count_left);
-                *stack += transfer_count;
-                count_left -= transfer_count;
-            }
-            if count_left <= 0 {
-                break;
-            }
-        }
-
-        while count_left > 0 {
-            if let Some(capacity) = self.1 {
-                if capacity > self.0.len() as u32 {
-                    break;
+        // Try to increment already existent same items
+        if size > 1 {
+            for e in self.0.iter_mut().filter_map(|i| i.as_mut()) {
+                if reflections.get(*e).unwrap().id == id {
+                    if let Some(mut e_stack) = stacks.get_mut(*e) {
+                        let transfer_count = current.min(e_stack.stack_size - e_stack.current);
+                        e_stack.current += transfer_count;
+                        current = current.saturating_sub(transfer_count);
+                        if current == 0 {
+                            break;
+                        }
+                    }
                 }
             }
 
-            let transfer_count = count_left.min(stack_size);
-            self.0.push(Some((item, transfer_count)));
-            count_left -= transfer_count;
+            // We can guarantee that if stack size is > 1 then item
+            // is Stackable
+            stacks.get_mut(item).unwrap().current = current;
+            if current == 0 {
+                return;
+            }
+        }
+
+        // Emplace new item in empty boxes
+        for item_box in self.0.iter_mut() {
+            if item_box.is_none() {
+                item_box.replace(item);
+                break;
+            }
+        }
+    }
+
+    pub fn maintain(&mut self) {
+        // Add empty space if there is no space left
+        if self.0.last().map(|x| x.is_some()).unwrap_or(false) {
+            self.0.push(None);
+        }
+        
+        if let Some(last_non_empty) = self.0.iter().rposition(|x| x.is_some()) {
+            self.0.truncate(last_non_empty + 2);
         }
     }
 
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
     pub fn iter(&self) -> impl Iterator<Item = &ItemBox> { self.0.iter() }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut ItemBox> { self.0.iter_mut() }
 }
 
 #[derive(Default, Debug, Component)]
@@ -102,10 +119,11 @@ impl fmt::Display for Rarity {
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct Stackable {
+    pub current: u32,
     pub stack_size: u32,
 }
 impl Default for Stackable {
-    fn default() -> Self { Stackable { stack_size: 1 } }
+    fn default() -> Self { Stackable { current: 1, stack_size: 1 } }
 }
 
 #[derive(Debug, Component)]

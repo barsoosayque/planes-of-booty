@@ -86,13 +86,19 @@ pub struct Settings {
 #[derive(SystemData)]
 pub struct UiData<'a> {
     pub entities: Entities<'a>,
+    pub reflections: ReadStorage<'a, Reflection>,
     pub player_tag: ReadStorage<'a, tag::Player>,
-    pub inventories: ReadStorage<'a, Inventory>,
-    pub weaponries: ReadStorage<'a, Weaponry>,
-    pub sprites: ReadStorage<'a, Sprite>,
+
+    pub inventories: WriteStorage<'a, Inventory>,
+    pub weaponries: WriteStorage<'a, Weaponry>,
+
+    pub weapons: ReadStorage<'a, Weapon>,
     pub named: ReadStorage<'a, Named>,
     pub qualities: ReadStorage<'a, Quality>,
-    pub weapons: ReadStorage<'a, Weapon>,
+    pub stacks: WriteStorage<'a, Stackable>,
+
+    pub sprites: ReadStorage<'a, Sprite>,
+
     pub spawn_queue: Write<'a, SpawnQueue>,
     pub inputs: Write<'a, Inputs>,
     pub settings: Write<'a, Settings>,

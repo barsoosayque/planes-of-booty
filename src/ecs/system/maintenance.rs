@@ -4,6 +4,16 @@ use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use specs::prelude::*;
 use std::ops::DerefMut;
 
+pub struct InventoryMaintenanceSystem;
+impl<'a> System<'a> for InventoryMaintenanceSystem {
+    type SystemData = WriteStorage<'a, Inventory>;
+
+    fn run(&mut self, mut inventories: Self::SystemData) {
+        for inv in (&mut inventories).join() {
+            inv.content.maintain();
+        }
+    }
+}
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
     type SystemData = (WriteStorage<'a, Movement>, Read<'a, Inputs>, WriteStorage<'a, tag::Player>);
@@ -52,6 +62,10 @@ impl<'s> System<'s> for UiSystem<'_> {
             } else if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
                 hub.debug_window.selected_entity = None;
             }
+        }
+
+        if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
+            hub.inventory_window.reset_dragging();            
         }
     }
 }
