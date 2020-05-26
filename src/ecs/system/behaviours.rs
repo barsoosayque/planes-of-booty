@@ -1,5 +1,5 @@
 use super::super::{component::*, resource::*};
-use crate::{math::*, attack::AttackPatternData};
+use crate::{attack::AttackPatternData, math::*};
 use nphysics2d::{
     algebra::ForceType,
     math::{Force, Isometry},
@@ -7,15 +7,23 @@ use nphysics2d::{
 };
 use specs::{
     storage::ComponentEvent, BitSet, Entities, Join, Read, ReadStorage, ReaderId, System, SystemData, World, WorldExt,
-    WriteExpect, WriteStorage,
+    Write, WriteExpect, WriteStorage,
 };
+use std::ops::DerefMut;
 
 pub struct WeaponrySystem;
 impl<'a> System<'a> for WeaponrySystem {
-    type SystemData = (Read<'a, DeltaTime>, WriteStorage<'a, Weaponry>, WriteStorage<'a, WeaponProperties>, ReadStorage<'a, WeaponAttack>);
+    type SystemData = (
+        Read<'a, DeltaTime>,
+        Write<'a, SpawnQueue>,
+        ReadStorage<'a, Transform>,
+        WriteStorage<'a, Weaponry>,
+        WriteStorage<'a, WeaponProperties>,
+        ReadStorage<'a, WeaponAttack>,
+    );
 
-    fn run(&mut self, (dt, mut weaponries, mut props, attacks): Self::SystemData) {
-        for weaponry in (&mut weaponries).join() {
+    fn run(&mut self, (dt, mut spawn_queue, transforms, mut weaponries, mut props, attacks): Self::SystemData) {
+        for (transform, weaponry) in (&transforms, &mut weaponries).join() {
             if let Some((Some(mut prop), Some(attack))) = weaponry.primary.map(|w| (props.get_mut(w), attacks.get(w))) {
                 // handle reloading
                 if prop.clip == 0 {
@@ -29,7 +37,11 @@ impl<'a> System<'a> for WeaponrySystem {
                 // shot if cooled
                 if prop.is_shooting && prop.clip > 0 {
                     if prop.cooldown == 0.0 {
-                        let mut data = AttackPatternData { prop  };
+                        let mut data = AttackPatternData {
+                            shooting_at: transform.pos,
+                            prop: prop,
+                            projectiles: spawn_queue.deref_mut(),
+                        };
                         attack.pattern.attack(&mut data);
                         prop.clip -= 1;
                     } else {
@@ -38,16 +50,6 @@ impl<'a> System<'a> for WeaponrySystem {
                 }
             }
         }
-    }
-}
-
-pub struct ProjectilesSystem;
-impl<'a> System<'a> for ProjectilesSystem {
-    type SystemData =
-        (Entities<'a>, WriteStorage<'a, Weaponry>, WriteStorage<'a, WeaponProperties>, ReadStorage<'a, WeaponAttack>);
-
-    fn run(&mut self, (mut _entities, mut _weaponries, mut _props, _attacks): Self::SystemData) {
-        // TODO
     }
 }
 
@@ -203,6 +205,34 @@ impl<'a> System<'a> for FollowTargetSystem {
                     let normalized = safe_delta.try_normalize().unwrap_or_default();
                     movement.target_acceleration_normal = normalized * brake_factor;
                 }
+            }
+        }
+    }
+}
+
+pub struct DistanceCounterSystem;
+impl<'a> System<'a> for DistanceCounterSystem {
+    type SystemData = (WriteStorage<'a, DistanceCounter>, ReadStorage<'a, Transform>);
+
+    fn run(&mut self, (mut counters, transforms): Self::SystemData) {
+        for (counter, transform) in (&mut counters, &transforms).join() {
+            if let Some(last) = counter.last_pos {
+                let d = (transform.pos - last).length();
+                counter.distance += d;
+            }
+            counter.last_pos.replace(transform.pos);
+        }
+    }
+}
+
+pub struct DistanceLimitingSystem;
+impl<'a> System<'a> for DistanceLimitingSystem {
+    type SystemData = (Entities<'a>, ReadStorage<'a, DistanceCounter>, ReadStorage<'a, DistanceLimited>);
+
+    fn run(&mut self, (entities, counters, limits): Self::SystemData) {
+        for (e, counter, limit) in (&entities, &counters, &limits).join() {
+            if counter.distance >= limit.limit {
+                entities.delete(e).unwrap();
             }
         }
     }

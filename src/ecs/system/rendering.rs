@@ -36,21 +36,19 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
 pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for SpriteRenderSystem<'_> {
     type SystemData =
-        (ReadStorage<'a, Transform>, ReadStorage<'a, Movement>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
+        (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
 
-    fn run(&mut self, (transforms, movements, sprites, _directionals): Self::SystemData) {
-        for (transform, movement, sprite) in (&transforms, &movements, &sprites).join() {
+    fn run(&mut self, (transforms, sprites, directionals): Self::SystemData) {
+        for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
             match &sprite.asset {
                 SpriteAsset::Single { value } => {
                     render_sprite(self.0, &value, &transform.pos, &sprite.size);
                 },
                 SpriteAsset::Directional { north, east, south, west } => {
-                    let img = directional! {
-                        Direction::from_vec2f(&movement.velocity) =>
-                        &north, &east, &south, &west
-                    };
-
-                    render_sprite(self.0, &img, &transform.pos, &sprite.size);
+                    if let Some(Directional { direction}) = directional_opt {
+                        let img = directional!(direction => &north, &east, &south, &west);
+                        render_sprite(self.0, &img, &transform.pos, &sprite.size);
+                    }
                 },
             }
         }

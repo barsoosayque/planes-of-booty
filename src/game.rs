@@ -6,6 +6,11 @@ use crate::{
     ui::ImGuiSystem,
 };
 use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
+use nphysics2d::{
+    math::{Isometry, Velocity},
+    ncollide2d::shape,
+    object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
+};
 use specs::prelude::*;
 
 pub struct Game {
@@ -31,9 +36,10 @@ impl Game {
             .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
             .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
+            .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
+            .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
-            .with(ProjectilesSystem, "projectiles_system", &["weaponry_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -43,6 +49,8 @@ impl Game {
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<Reflection>();
+        world.register::<DistanceCounter>();
+        world.register::<DistanceLimited>();
         world.register::<Movement>();
         world.register::<Transform>();
         world.register::<Sprite>();
@@ -113,6 +121,40 @@ impl EventHandler for Game {
                     if let Some(inventory) = self.world.write_storage::<Inventory>().get_mut(to_e) {
                         inventory.content.add(&self.world, e);
                     }
+                },
+                SpawnItem::Projectile(def) => {
+                    let mut assets = self.world.write_resource::<AssetManager>();
+                    let mut phys_world = self.world.write_resource::<PhysicWorld>();
+                    let body = phys_world.bodies.insert(
+                        RigidBodyDesc::new()
+                            .status(BodyStatus::Kinematic)
+                            .position(Isometry::translation(def.pos.x, def.pos.y))
+                            .velocity(Velocity::linear(def.velocity.x, def.velocity.y))
+                            .build(),
+                    );
+                    let shape = shape::ShapeHandle::new(shape::Cuboid::new(
+                        [def.size.width * 0.5, def.size.height * 0.5].into(),
+                    ));
+                    let collider = phys_world
+                        .colliders
+                        .insert(ColliderDesc::new(shape.clone()).sensor(true).build(BodyPartHandle(body, 0)));
+                    let entity = self
+                        .world
+                        .create_entity_unchecked()
+                        .with(Transform::default())
+                        .with(DistanceLimited { limit: def.distance })
+                        .with(DistanceCounter::default())
+                        .with(Physic {
+                            body: body,
+                            collide: (collider, CollideShapeHandle::Single { value: shape.clone() }),
+                        })
+                        .with(Sprite {
+                            asset: SpriteAsset::Single { value: assets.get::<ImageAsset>(&def.asset, ctx).unwrap() },
+                            size: def.size,
+                        })
+                        .build();
+                    phys_world.bodies.rigid_body_mut(body).unwrap().set_user_data(Some(Box::new(entity)));
+                    phys_world.colliders.get_mut(collider).unwrap().set_user_data(Some(Box::new(entity)));
                 },
             }
         }

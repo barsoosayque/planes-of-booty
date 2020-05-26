@@ -240,6 +240,19 @@ pub struct Reflection {
     pub id: &'static str,
 }
 
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct DistanceLimited {
+    pub limit: f32,
+}
+
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct DistanceCounter {
+    pub distance: f32,
+    pub last_pos: Option<Vec2f>
+}
+
 #[derive(Debug)]
 pub enum DirOrSingle<T> {
     Single { value: T },

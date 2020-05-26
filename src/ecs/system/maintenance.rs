@@ -45,7 +45,7 @@ impl<'a> System<'a> for InputsSystem {
         for (transform, weaponry, _) in (&transforms, &weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
                 props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
-                props.shooting_normal = (transform.pos - inputs.mouse_pos.to_vector()).normalize()
+                props.shooting_normal = (inputs.mouse_pos.to_vector() - transform.pos).normalize()
             }
         }
     }

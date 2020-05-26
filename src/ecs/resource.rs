@@ -1,6 +1,7 @@
 use super::{component::*, tag};
 use crate::{
     assets::AssetManager,
+    attack::{ProjectileBuilder, ProjectileDef},
     math::{Point2f, Vec2f},
     ui::*,
 };
@@ -124,8 +125,15 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
 #[derive(Default, Debug)]
 pub struct SpawnQueue(pub Queue<SpawnItem>);
 
+impl ProjectileBuilder for SpawnQueue {
+    fn build(&mut self, def: ProjectileDef) {
+        self.0.push_back(SpawnItem::Projectile(def));
+    }
+}
+
 #[derive(Debug)]
 pub enum SpawnItem {
     Entity(String, Point2f),
     Item(String, u32, Entity),
+    Projectile(ProjectileDef),
 }
