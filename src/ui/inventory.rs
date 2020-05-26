@@ -180,11 +180,14 @@ macro_rules! items {
 }
 impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
     fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
+        let mut for_deletion: Set<Entity> = Set::new();
         for e in &self.show_inventories_for {
+            let mut is_opened = true;
             within_window!(Window::new(im_str!("Inventory"))
             .position_pivot([0.5, 0.5])
             .resizable(false)
             .focus_on_appearing(true)
+            .opened(&mut is_opened)
             .size([0.0, 0.0], Condition::Once), &ui => {
                 if let Some(mut inventory) = data.inventories.get_mut(*e) {
                     ui.bullet_text(im_str!("Content:"));
@@ -222,6 +225,13 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
                     });
                 }
             });
+            if !is_opened {
+                for_deletion.insert(*e);
+            }
+        }
+
+        for e in for_deletion {
+            self.show_inventories_for.remove(&e);
         }
     }
 }
