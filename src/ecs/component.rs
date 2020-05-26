@@ -1,6 +1,6 @@
 use crate::{
-    attack::AttackPattern,
     assets::*,
+    attack::AttackPattern,
     math::{Direction, Size2f, Vec2f},
 };
 use nphysics2d::{
@@ -76,7 +76,7 @@ impl Content {
         if self.0.last().map(|x| x.is_some()).unwrap_or(false) {
             self.0.push(None);
         }
-        
+
         if let Some(last_non_empty) = self.0.iter().rposition(|x| x.is_some()) {
             self.0.truncate(last_non_empty + 2);
         }
@@ -140,7 +140,7 @@ pub struct WeaponProperties {
     pub reloading: f32,
 
     pub cooldown_time: f32,
-    pub cooldown: f32
+    pub cooldown: f32,
 }
 
 #[derive(Component)]
@@ -182,6 +182,14 @@ pub struct Movement {
     pub steering_difficulty: f32,
 }
 
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub enum CollisionGroup {
+    Players = 1,
+    Enemies = 2,
+    Projectiles = 3,
+    Props = 4,
+}
+
 //////////////////////
 // Targeting and AI //
 //////////////////////
@@ -206,16 +214,16 @@ pub struct SearchForTarget {
     pub radius: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[storage(VecStorage)]
 pub struct Faction {
     pub id: FactionId,
 }
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum FactionId {
-    Pirates,
     Good,
+    Pirates,
 }
 
 ///////////////
@@ -247,7 +255,6 @@ pub struct DamageDealer {
     pub damage: u32,
 }
 
-
 /////////////
 // Utility //
 /////////////
@@ -268,7 +275,7 @@ pub struct DistanceLimited {
 #[storage(VecStorage)]
 pub struct DistanceCounter {
     pub distance: f32,
-    pub last_pos: Option<Vec2f>
+    pub last_pos: Option<Vec2f>,
 }
 
 #[derive(Debug)]

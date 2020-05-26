@@ -29,6 +29,7 @@ pub enum PartValue {
     Bool(bool),
     Image(String),
     Faction(String),
+    CollisionGroup(String),
     Rarity(String),
     AttackPattern(String),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
@@ -37,7 +38,7 @@ pub enum PartValue {
     Vec { x: f32, y: f32 },
     Body { status: String, mass: f32 },
     Box { uuid: Uuid, x: f32, y: f32, width: f32, height: f32 },
-    Collide { sensor: bool, shape: Box<PartValue> },
+    Collide { sensor: bool, collision_membership: Vec<PartValue>, shape: Box<PartValue> },
 }
 
 impl std::fmt::Display for PartValue {
@@ -53,6 +54,9 @@ impl std::fmt::Display for PartValue {
             PartValue::Bool(value) => write!(f, "{}", value),
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
+            PartValue::CollisionGroup(group) => {
+                write!(f, "(component::CollisionGroup::{} as usize)", group.to_camel_case())
+            },
             PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
             PartValue::AttackPattern(pattern) => write!(f, "Box::new(crate::attack::{})", pattern.to_camel_case()),
             PartValue::Directional { north, east, south, west } => write!(
@@ -75,6 +79,7 @@ impl PartValue {
         match (self, other) {
             (Self::Collide { .. }, Self::Body { .. }) => true,
             (Self::Collide { .. }, Self::Box { .. }) => true,
+            (Self::Collide { .. }, Self::Faction { .. }) => true,
             _ => false,
         }
     }
@@ -89,19 +94,24 @@ impl PartValue {
                 mass,
                 status.to_camel_case()
             )),
-            PartValue::Collide { sensor, shape } => {
+            PartValue::Collide { sensor, collision_membership, shape } => {
                 let first_shape = match &**shape {
                     PartValue::Single { value } => value,
                     PartValue::Directional { north, .. } => north,
                     _ => panic!("No valid shapes defined to create a collide"),
                 };
 
+                let collision_membership_str = collision_membership.iter().map(|v| format!("{}", v)).collect::<Vec<String>>().join(",");
                 Some(format!(
                     "let collider = world.write_resource::<resource::PhysicWorld>()\
                     .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
-                        .sensor({}).build(nphysics2d::object::BodyPartHandle(body, 0))\
+                        .sensor({})\
+                        .collision_groups(\
+                            nphysics2d::ncollide2d::pipeline::object::CollisionGroups::new()\
+                            .with_membership(&[{}])\
+                        ).build(nphysics2d::object::BodyPartHandle(body, 0))\
                     );",
-                    first_shape, sensor
+                    first_shape, sensor, collision_membership_str
                 ))
             },
             PartValue::Box { uuid, x, y, width, height } => Some(format!(
@@ -201,6 +211,7 @@ impl<'de> Visitor<'de> for PartValueVisitor {
         while let Some((key, value)) = access.next_entry::<String, PartValue>()? {
             match (key.as_ref(), value) {
                 ("image", PartValue::Str(value)) => return Ok(PartValue::Image(value)),
+                ("collision_group", PartValue::Str(value)) => return Ok(PartValue::CollisionGroup(value)),
                 ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
                 ("rarity", PartValue::Str(value)) => return Ok(PartValue::Rarity(value)),
                 ("attack_pattern", PartValue::Str(value)) => return Ok(PartValue::AttackPattern(value)),
@@ -243,8 +254,10 @@ impl<'de> Visitor<'de> for PartValueVisitor {
                 width,
                 height,
             })
-        } else if let (Some(PartValue::Bool(sensor)), Some(shape)) = (buffer.remove("sensor"), buffer.remove("shape")) {
-            Ok(PartValue::Collide { sensor, shape: Box::new(shape) })
+        } else if let (Some(PartValue::Bool(sensor)), Some(shape), Some(PartValue::Seq(collision_membership))) =
+            (buffer.remove("sensor"), buffer.remove("shape"), buffer.remove("collision_membership"))
+        {
+            Ok(PartValue::Collide { sensor, collision_membership, shape: Box::new(shape) })
         } else {
             Err(de::Error::custom(format!("No special fields defined. Here is buffer: {:?}", buffer)))
         }

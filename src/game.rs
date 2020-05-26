@@ -8,7 +8,7 @@ use crate::{
 use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
 use nphysics2d::{
     math::{Isometry, Velocity},
-    ncollide2d::shape,
+    ncollide2d::{pipeline::object::CollisionGroups, shape},
     object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
 };
 use specs::prelude::*;
@@ -139,9 +139,16 @@ impl EventHandler for Game {
                     let shape = shape::ShapeHandle::new(shape::Cuboid::new(
                         [def.size.width * 0.5, def.size.height * 0.5].into(),
                     ));
-                    let collider = phys_world
-                        .colliders
-                        .insert(ColliderDesc::new(shape.clone()).sensor(true).build(BodyPartHandle(body, 0)));
+                    let collider = phys_world.colliders.insert(
+                        ColliderDesc::new(shape.clone())
+                            .sensor(true)
+                            .collision_groups(
+                                CollisionGroups::new()
+                                    .with_membership(&[CollisionGroup::Projectiles as usize])
+                                    .with_blacklist(&def.ignore_groups.into_iter().map(|g| g as usize).collect::<Vec<usize>>()),
+                            )
+                            .build(BodyPartHandle(body, 0)),
+                    );
                     let entity = self
                         .world
                         .create_entity_unchecked()

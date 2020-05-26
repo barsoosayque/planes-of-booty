@@ -6,7 +6,7 @@ use nphysics2d::{
     object::{Body, RigidBody},
 };
 use specs::{
-    storage::ComponentEvent, BitSet, Entities, Entity, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
+    storage::ComponentEvent, BitSet, Entities, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
     SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
 };
 use std::ops::DerefMut;
@@ -16,14 +16,15 @@ impl<'a> System<'a> for WeaponrySystem {
     type SystemData = (
         Read<'a, DeltaTime>,
         Write<'a, SpawnQueue>,
+        ReadStorage<'a, Faction>,
         ReadStorage<'a, Transform>,
         WriteStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
         ReadStorage<'a, WeaponAttack>,
     );
 
-    fn run(&mut self, (dt, mut spawn_queue, transforms, mut weaponries, mut props, attacks): Self::SystemData) {
-        for (transform, weaponry) in (&transforms, &mut weaponries).join() {
+    fn run(&mut self, (dt, mut spawn_queue, factions, transforms, mut weaponries, mut props, attacks): Self::SystemData) {
+        for (transform, weaponry, faction_opt) in (&transforms, &mut weaponries, (&factions).maybe()).join() {
             if let Some((Some(mut prop), Some(attack))) = weaponry.primary.map(|w| (props.get_mut(w), attacks.get(w))) {
                 // handle reloading
                 if prop.clip == 0 {
@@ -38,6 +39,7 @@ impl<'a> System<'a> for WeaponrySystem {
                 if prop.is_shooting && prop.clip > 0 {
                     if prop.cooldown == 0.0 {
                         let mut data = AttackPatternData {
+                            shooter_faction: faction_opt.map(|f| &f.id),
                             shooting_at: transform.pos,
                             prop: prop,
                             projectiles: spawn_queue.deref_mut(),

@@ -11,6 +11,7 @@ components:
             status: "dynamic"
             mass: 1.0
         collide:
+            collision_membership: [ { collision_group: "enemies" } ]
             sensor: false
             shape:
                 north:
