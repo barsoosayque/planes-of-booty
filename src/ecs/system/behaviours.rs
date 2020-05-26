@@ -1,14 +1,55 @@
 use super::super::{component::*, resource::*};
-use crate::math::*;
+use crate::{math::*, attack::AttackPatternData};
 use nphysics2d::{
     algebra::ForceType,
-    math::{Isometry, Force},
+    math::{Force, Isometry},
     object::{Body, RigidBody},
 };
 use specs::{
     storage::ComponentEvent, BitSet, Entities, Join, Read, ReadStorage, ReaderId, System, SystemData, World, WorldExt,
     WriteExpect, WriteStorage,
 };
+
+pub struct WeaponrySystem;
+impl<'a> System<'a> for WeaponrySystem {
+    type SystemData = (Read<'a, DeltaTime>, WriteStorage<'a, Weaponry>, WriteStorage<'a, WeaponProperties>, ReadStorage<'a, WeaponAttack>);
+
+    fn run(&mut self, (dt, mut weaponries, mut props, attacks): Self::SystemData) {
+        for weaponry in (&mut weaponries).join() {
+            if let Some((Some(mut prop), Some(attack))) = weaponry.primary.map(|w| (props.get_mut(w), attacks.get(w))) {
+                // handle reloading
+                if prop.clip == 0 {
+                    prop.reloading += dt.0.as_secs_f32();
+                    if prop.reloading >= prop.reloading_time {
+                        prop.reloading = 0.0;
+                        prop.clip = prop.clip_size;
+                    }
+                }
+
+                // shot if cooled
+                if prop.is_shooting && prop.clip > 0 {
+                    if prop.cooldown == 0.0 {
+                        let mut data = AttackPatternData { prop  };
+                        attack.pattern.attack(&mut data);
+                        prop.clip -= 1;
+                    } else {
+                        prop.cooldown = (prop.cooldown - dt.0.as_secs_f32()).max(0.0);
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub struct ProjectilesSystem;
+impl<'a> System<'a> for ProjectilesSystem {
+    type SystemData =
+        (Entities<'a>, WriteStorage<'a, Weaponry>, WriteStorage<'a, WeaponProperties>, ReadStorage<'a, WeaponAttack>);
+
+    fn run(&mut self, (mut _entities, mut _weaponries, mut _props, _attacks): Self::SystemData) {
+        // TODO
+    }
+}
 
 pub struct PhysicSystem;
 impl<'a> System<'a> for PhysicSystem {

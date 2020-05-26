@@ -32,6 +32,8 @@ impl Game {
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
             .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
+            .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
+            .with(ProjectilesSystem, "projectiles_system", &["weaponry_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -54,7 +56,8 @@ impl Game {
         world.register::<Named>();
         world.register::<Quality>();
         world.register::<Stackable>();
-        world.register::<Weapon>();
+        world.register::<WeaponProperties>();
+        world.register::<WeaponAttack>();
         world.register::<Weaponry>();
         dispatcher.setup(&mut world);
 

@@ -80,27 +80,30 @@ macro_rules! drag_and_drop {
 // TODO: somehow bypass macro hygiene with self, ui, ctx and data
 macro_rules! item_tooltip {
     ($self:expr, $item:expr, $ui:expr, $ctx:expr, $data:expr) => {
+        let token = $ui.push_text_wrap_pos(400.0);
         if let Some(named) = $data.named.get($item) {
             $ui.bullet_text(&ImString::new(named.name));
             $ui.text(&named.description);
         }
-        if let Some(weapon) = $data.weapons.get($item) {
-            $ui.spacing();
-            $ui.text_colored([0.73, 0.47, 0.38, 1.0], im_str!("Weapon stats:"));
+        if let (Some(attack), Some(props)) = ($data.wpn_attacks.get($item), $data.wpn_props.get($item)) {
+            $ui.separator();
+            $ui.text_colored([0.78, 0.23, 0.20, 1.0], im_str!("It's a weapon:"));
             $ui.text(&ImString::new(&format!(
-                "Damage: {} | Clip size: {} | Reloading time: {:.2} sec",
-                weapon.damage, weapon.clip_size, weapon.reloading_time
+                "> Clip size: {}\n> Reloading time: {:.2} sec\n> Cooling time: {:.2} sec",
+                props.clip_size, props.reloading_time, props.cooldown_time
             )));
+            $ui.text(&ImString::new(attack.pattern.description()));
         }
         if let Some(quality) = $data.qualities.get($item) {
-            $ui.spacing();
+            $ui.separator();
             let color = match quality.rarity {
-                Rarity::Common => [0.33, 0.33, 0.33, 1.0],
-                Rarity::Rare => [0.06, 0.39, 0.53, 1.0],
-                Rarity::Epic => [0.46, 0.16, 0.36, 1.0],
+                Rarity::Common => [0.4, 0.4, 0.4, 1.0],
+                Rarity::Rare => [0.29, 0.48, 0.64, 1.0],
+                Rarity::Legendary => [1.0, 0.9, 0.36, 1.0],
             };
             $ui.text_colored(color, &format!("Rarity: {}", quality.rarity));
         }
+        token.pop($ui);
     };
 }
 // Returns true if there is drag and drop for this box
@@ -210,7 +213,8 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
                             ];
 
                             if item_box!(self, item_box, pos, ui, ctx, data) {
-                                if data.weapons.get(self.dragging_item().unwrap()).is_some() {
+                                let item = self.dragging_item().unwrap();
+                                if data.wpn_props.get(item).is_some() && data.wpn_attacks.get(item).is_some() {
                                     drag_and_drop!(&mut item_box, &mut self.dragging_item, data);
                                 }
                             }

@@ -1,4 +1,5 @@
 use crate::{
+    attack::AttackPattern,
     assets::*,
     math::{Direction, Size2f, Vec2f},
 };
@@ -13,14 +14,14 @@ use std::{collections::HashSet as Set, fmt, sync::Arc};
 // Inventory and Items //
 /////////////////////////
 
-pub type ItemBox = Option<Entity>;
-
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Weaponry {
     pub primary: ItemBox,
     pub secondary: ItemBox,
 }
+
+pub type ItemBox = Option<Entity>;
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
@@ -104,14 +105,14 @@ pub struct Quality {
 pub enum Rarity {
     Common,
     Rare,
-    Epic,
+    Legendary,
 }
 impl fmt::Display for Rarity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
             Rarity::Common => "Common",
             Rarity::Rare => "Rare",
-            Rarity::Epic => "Epic",
+            Rarity::Legendary => "Legendary",
         })
     }
 }
@@ -126,16 +127,28 @@ impl Default for Stackable {
     fn default() -> Self { Stackable { current: 1, stack_size: 1 } }
 }
 
-#[derive(Debug, Component)]
+#[derive(Default, Component)]
 #[storage(VecStorage)]
-pub struct Weapon {
-    pub projectile_asset: Arc<ImageAsset>,
-    pub projectile_velocity: f32,
-    pub projectile_lifetime: f32,
+pub struct WeaponProperties {
+    pub shooting_normal: Vec2f,
+    pub is_shooting: bool,
+
     pub clip_size: u8,
-    pub damage: u32,
+    pub clip: u8,
+
     pub reloading_time: f32,
-    pub accuracy: f32,
+    pub reloading: f32,
+
+    pub cooldown_time: f32,
+    pub cooldown: f32
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct WeaponAttack {
+    // note: it is pretty much possible to refactor attack pattern to be
+    // some lua/gluon script.
+    pub pattern: Box<dyn AttackPattern>,
 }
 
 /////////////

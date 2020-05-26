@@ -16,9 +16,16 @@ impl<'a> System<'a> for InventoryMaintenanceSystem {
 }
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
-    type SystemData = (WriteStorage<'a, Movement>, Read<'a, Inputs>, WriteStorage<'a, tag::Player>);
+    type SystemData = (
+        WriteStorage<'a, Movement>,
+        ReadStorage<'a, Transform>,
+        Read<'a, Inputs>,
+        ReadStorage<'a, tag::Player>,
+        ReadStorage<'a, Weaponry>,
+        WriteStorage<'a, WeaponProperties>,
+    );
 
-    fn run(&mut self, (mut movements, inputs, tag): Self::SystemData) {
+    fn run(&mut self, (mut movements, transforms, inputs, tag, weaponries, mut wpn_props): Self::SystemData) {
         for (movement, _) in (&mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
             if inputs.pressed_keys.contains(&KeyCode::W) {
@@ -35,6 +42,12 @@ impl<'a> System<'a> for InputsSystem {
             };
             movement.target_acceleration_normal = direction.try_normalize().unwrap_or_default();
         }
+        for (transform, weaponry, _) in (&transforms, &weaponries, &tag).join() {
+            if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
+                props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
+                props.shooting_normal = (transform.pos - inputs.mouse_pos.to_vector()).normalize()
+            }
+        }
     }
 }
 
@@ -46,6 +59,7 @@ impl<'s> System<'s> for UiSystem<'_> {
         let (ctx, imgui) = (&mut self.0, &mut self.1);
         if imgui.update(ctx, dt.0, hub.deref_mut(), &mut data) {
             data.inputs.mouse_clicked.remove(&MouseButton::Left);
+            data.inputs.mouse_pressed.remove(&MouseButton::Left);
         }
 
         if hub.menu.is_show_inventory {
@@ -65,7 +79,7 @@ impl<'s> System<'s> for UiSystem<'_> {
         }
 
         if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
-            hub.inventory_window.reset_dragging();            
+            hub.inventory_window.reset_dragging();
         }
     }
 }

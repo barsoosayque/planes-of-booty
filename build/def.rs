@@ -30,6 +30,7 @@ pub enum PartValue {
     Image(String),
     Faction(String),
     Rarity(String),
+    AttackPattern(String),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
     Single { value: Box<PartValue> },
     Size { width: f32, height: f32 },
@@ -53,6 +54,7 @@ impl std::fmt::Display for PartValue {
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
             PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
+            PartValue::AttackPattern(pattern) => write!(f, "Box::new(crate::attack::{})", pattern.to_camel_case()),
             PartValue::Directional { north, east, south, west } => write!(
                 f,
                 "component::DirOrSingle::Directional{{north:{},east:{},south:{},west:{}}}",
@@ -79,7 +81,6 @@ impl PartValue {
 
     pub fn initialize(&self) -> Option<String> {
         match self {
-            // PartValue::Num(..) => Some("use std::convert::TryInto;".into()),
             PartValue::Body { mass, status } => Some(format!(
                 "let body = world.write_resource::<resource::PhysicWorld>()\
                     .bodies.insert(nphysics2d::object::RigidBodyDesc::new()\
@@ -202,6 +203,7 @@ impl<'de> Visitor<'de> for PartValueVisitor {
                 ("image", PartValue::Str(value)) => return Ok(PartValue::Image(value)),
                 ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
                 ("rarity", PartValue::Str(value)) => return Ok(PartValue::Rarity(value)),
+                ("attack_pattern", PartValue::Str(value)) => return Ok(PartValue::AttackPattern(value)),
                 (key, value) => {
                     buffer.insert(key.to_owned(), value);
                 },

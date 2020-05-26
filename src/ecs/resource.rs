@@ -92,7 +92,8 @@ pub struct UiData<'a> {
     pub inventories: WriteStorage<'a, Inventory>,
     pub weaponries: WriteStorage<'a, Weaponry>,
 
-    pub weapons: ReadStorage<'a, Weapon>,
+    pub wpn_props: ReadStorage<'a, WeaponProperties>,
+    pub wpn_attacks: ReadStorage<'a, WeaponAttack>,
     pub named: ReadStorage<'a, Named>,
     pub qualities: ReadStorage<'a, Quality>,
     pub stacks: WriteStorage<'a, Stackable>,

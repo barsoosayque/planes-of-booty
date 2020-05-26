@@ -8,6 +8,7 @@ use log::info;
 #[macro_use]
 mod math;
 
+mod attack;
 mod assets;
 mod ecs;
 mod entity;
