@@ -230,6 +230,24 @@ pub struct Sprite {
 }
 pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 
+///////////////////////
+// Entity properties //
+///////////////////////
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct HealthPool {
+    pub max_hp: u32,
+    pub hp: u32,
+}
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct DamageDealer {
+    pub damage: u32,
+}
+
+
 /////////////
 // Utility //
 /////////////

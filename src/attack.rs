@@ -14,6 +14,7 @@ pub struct AttackPatternData<'a> {
 #[derive(Debug, Clone)]
 pub struct ProjectileDef {
     pub asset: String,
+    pub damage: u32,
     pub velocity: Vec2f,
     pub distance: f32,
     pub pos: Vec2f,
@@ -27,6 +28,7 @@ pub trait AttackPattern: Sync + Send {
 
 pub struct Slingshot;
 impl Slingshot {
+    const DAMAGE: u32 = 7;
     const ACCURACITY: f32 = 0.9;
     const DISTANCE: f32 = 400.0;
     const PROJECTILE_VELOCITY_FLAT: f32 = 250.0;
@@ -42,6 +44,7 @@ impl AttackPattern for Slingshot {
         let accuracy_lost = Vec2f::new(u.sample(&mut rng), u.sample(&mut rng));
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
+            damage: Self::DAMAGE,
             velocity: accuracy_lost.lerp(data.prop.shooting_normal, Self::ACCURACITY) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,

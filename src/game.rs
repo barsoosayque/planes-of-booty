@@ -29,6 +29,7 @@ impl Game {
         let imgui = ImGuiSystem::new(ctx);
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
+            .with(WatchDeadSystem, "watch_dead_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &[])
             .with(InputsSystem, "inputs_system", &[])
@@ -40,6 +41,7 @@ impl Game {
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
+            .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(UiHub::default());
@@ -67,6 +69,8 @@ impl Game {
         world.register::<WeaponProperties>();
         world.register::<WeaponAttack>();
         world.register::<Weaponry>();
+        world.register::<HealthPool>();
+        world.register::<DamageDealer>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
@@ -144,6 +148,7 @@ impl EventHandler for Game {
                         .with(Transform::default())
                         .with(DistanceLimited { limit: def.distance })
                         .with(DistanceCounter::default())
+                        .with(DamageDealer { damage: def.damage })
                         .with(Physic {
                             body: body,
                             collide: (collider, CollideShapeHandle::Single { value: shape.clone() }),

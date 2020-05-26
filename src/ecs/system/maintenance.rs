@@ -14,6 +14,7 @@ impl<'a> System<'a> for InventoryMaintenanceSystem {
         }
     }
 }
+
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
     type SystemData = (
@@ -46,6 +47,19 @@ impl<'a> System<'a> for InputsSystem {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
                 props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
                 props.shooting_normal = (inputs.mouse_pos.to_vector() - transform.pos).normalize()
+            }
+        }
+    }
+}
+
+pub struct WatchDeadSystem;
+impl<'a> System<'a> for WatchDeadSystem {
+    type SystemData = (Entities<'a>, ReadStorage<'a, HealthPool>);
+
+    fn run(&mut self, (entities, hpools): Self::SystemData) {
+        for (e, hpool) in (&entities, &hpools).join() {
+            if hpool.hp <= 0 {
+                entities.delete(e).unwrap();
             }
         }
     }

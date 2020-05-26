@@ -6,8 +6,8 @@ use nphysics2d::{
     object::{Body, RigidBody},
 };
 use specs::{
-    storage::ComponentEvent, BitSet, Entities, Join, Read, ReadStorage, ReaderId, System, SystemData, World, WorldExt,
-    Write, WriteExpect, WriteStorage,
+    storage::ComponentEvent, BitSet, Entities, Entity, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
+    SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
 };
 use std::ops::DerefMut;
 
@@ -48,6 +48,35 @@ impl<'a> System<'a> for WeaponrySystem {
                         prop.cooldown = (prop.cooldown - dt.0.as_secs_f32()).max(0.0);
                     }
                 }
+            }
+        }
+    }
+}
+pub struct ProjectileSystem;
+impl<'a> System<'a> for ProjectileSystem {
+    type SystemData =
+        (Entities<'a>, ReadExpect<'a, PhysicWorld>, WriteStorage<'a, HealthPool>, ReadStorage<'a, DamageDealer>);
+
+    fn run(&mut self, (entities, physic_world, mut hpools, ddealers): Self::SystemData) {
+        use nphysics2d::ncollide2d::query::Proximity;
+        for proximity in physic_world.geometry_world.proximity_events() {
+            if proximity.new_status == Proximity::Intersecting {
+                let (entity1, entity2) = (
+                    physic_world.entity_for_collider(&proximity.collider1).unwrap(),
+                    physic_world.entity_for_collider(&proximity.collider2).unwrap(),
+                );
+
+                let (mut hpool, ddealer, dealer_e) =
+                    if let (Some(hpool), Some(ddealer)) = (hpools.get_mut(*entity1), ddealers.get(*entity2)) {
+                        (hpool, ddealer, entity2)
+                    } else if let (Some(hpool), Some(ddealer)) = (hpools.get_mut(*entity2), ddealers.get(*entity1)) {
+                        (hpool, ddealer, entity1)
+                    } else {
+                        continue;
+                    };
+                
+                hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
+                entities.delete(*dealer_e).unwrap();
             }
         }
     }

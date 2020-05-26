@@ -25,6 +25,9 @@ components:
                 west: 
                     pos: { x: -20.0, y: 6.0 }
                     size: { width: 44.0, height: 18.0 }
+    HealthPool:
+        max_hp: 50
+        hp: 50
     Movement:
         max_velocity: 150.0
         acceleration_flat: 200.0

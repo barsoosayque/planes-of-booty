@@ -9,7 +9,7 @@ use ggez::input;
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
-    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderSet, RigidBody},
+    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderSet, RigidBody, DefaultColliderHandle},
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
 use specs::prelude::*;
@@ -48,6 +48,12 @@ impl PhysicWorld {
             &mut self.joint_constraints,
             &mut self.force_generators,
         );
+    }
+
+    pub fn entity_for_collider(&self, handle: &DefaultColliderHandle) -> Option<&Entity> {
+        self.colliders.get(*handle)
+            .and_then(|c| c.user_data())
+            .and_then(|d| d.downcast_ref::<Entity>())
     }
 
     pub fn bodies_iter(&self) -> impl Iterator<Item = (Entity, &RigidBody<f32>)> {

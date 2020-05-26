@@ -88,13 +88,16 @@ impl<'a> System<'a> for DebugTargetRenderSystem<'_> {
 
 pub struct DebugInfoRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for DebugInfoRenderSystem<'_> {
-    type SystemData = (Entities<'a>, ReadStorage<'a, Transform>, ReadStorage<'a, Target>);
+    type SystemData = (Entities<'a>, ReadStorage<'a, Transform>, ReadStorage<'a, Target>, ReadStorage<'a, HealthPool>);
 
-    fn run(&mut self, (entities, transforms, targets): Self::SystemData) {
-        for (e, transform, target_opt) in (&entities, &transforms, (&targets).maybe()).join() {
+    fn run(&mut self, (entities, transforms, targets, hpools): Self::SystemData) {
+        for (e, transform, target_opt, hpool_opt) in (&entities, &transforms, (&targets).maybe(), (&hpools).maybe()).join() {
             let mut text = format!("{:?}\nTransform({:.1}, {:.1})", e, transform.pos.x, transform.pos.y);
             if let Some(target) = target_opt {
                 text.push_str(&format!("\n{:?}", target));
+            }
+            if let Some(hpool) = hpool_opt {
+                text.push_str(&format!("\n{:?}", hpool));
             }
             let color = graphics::Color::from_rgb_u32(0x00000000);
             let text = graphics::TextFragment::from(text).color(color);
