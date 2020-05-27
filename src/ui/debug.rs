@@ -15,7 +15,6 @@ impl Default for DebugWindow {
 impl<'a> UiBuilder<&mut UiData<'a>> for DebugWindow {
     fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
         Window::new(im_str!("Debug window"))
-            .position_pivot([1.0, 0.0])
             .resizable(false)
             .focus_on_appearing(false)
             .size([300.0, 0.0], Condition::Once)

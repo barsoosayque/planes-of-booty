@@ -98,6 +98,7 @@ pub struct UiData<'a> {
 
     pub inventories: WriteStorage<'a, Inventory>,
     pub weaponries: WriteStorage<'a, Weaponry>,
+    pub hpools: ReadStorage<'a, HealthPool>,
 
     pub wpn_props: ReadStorage<'a, WeaponProperties>,
     pub wpn_attacks: ReadStorage<'a, WeaponAttack>,
@@ -115,6 +116,7 @@ pub struct UiData<'a> {
 #[derive(Default, Debug)]
 pub struct UiHub {
     pub menu: Menu,
+    pub hud: Hud,
     pub debug_window: DebugWindow,
     pub inventory_window: InventoryWindow,
 }
@@ -125,6 +127,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
             self.debug_window.build(ui, ctx, data);
         }
         self.inventory_window.build(ui, ctx, data);
+        self.hud.build(ui, ctx, data);
     }
 }
 

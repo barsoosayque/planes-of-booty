@@ -184,7 +184,6 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
         for e in &self.show_inventories_for {
             let mut is_opened = true;
             within_window!(Window::new(im_str!("Inventory"))
-            .position_pivot([0.5, 0.5])
             .resizable(false)
             .focus_on_appearing(true)
             .opened(&mut is_opened)
