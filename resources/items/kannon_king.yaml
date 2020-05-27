@@ -1,0 +1,19 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/item/kannon-king.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Kannon King"
+        description: "Cover yer ears."
+    Quality:
+        rarity: { rarity: "rare" }
+    WeaponAttack:
+        pattern: { attack_pattern: "cannon" }
+    WeaponProperties:
+        accuracy: 1.0
+        damage: 30
+        clip_size: 1
+        reloading_time: 0.5
+        cooldown_time: 0.0
+        __default: true

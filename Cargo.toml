@@ -26,6 +26,7 @@ rand = "0.7.3"
 # using imgui-rs with tooltip token patches
 imgui = { git = "https://github.com/barsoosayque/imgui-rs.git", branch = 'tooltip-patch' }
 # using ggez with some patches to allow images to work with imgui
+# probably next ggez version will include changes like this (they are in on devel branch)
 ggez = { git = "https://github.com/barsoosayque/ggez.git" }
 
 [build-dependencies]

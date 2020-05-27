@@ -1,0 +1,19 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/item/crossbow.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Multibolt crossbow"
+        description: "Mechanically perfect havoc wreaker."
+    Quality:
+        rarity: { rarity: "rare" }
+    WeaponAttack:
+        pattern: { attack_pattern: "crossbow" }
+    WeaponProperties:
+        accuracy: 0.85
+        damage: 3
+        clip_size: 20 
+        reloading_time: 1.5
+        cooldown_time: 0.1
+        __default: true

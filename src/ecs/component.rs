@@ -141,6 +141,9 @@ pub struct WeaponProperties {
 
     pub cooldown_time: f32,
     pub cooldown: f32,
+
+    pub damage: u32,
+    pub accuracy: f32
 }
 
 #[derive(Component)]

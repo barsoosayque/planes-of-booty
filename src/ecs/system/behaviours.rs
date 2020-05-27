@@ -6,8 +6,8 @@ use nphysics2d::{
     object::{Body, RigidBody},
 };
 use specs::{
-    storage::ComponentEvent, BitSet, Entities, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
-    SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
+    storage::ComponentEvent, BitSet, Entities, Join, Read, ReadExpect, ReadStorage, ReaderId, System, SystemData,
+    World, WorldExt, Write, WriteExpect, WriteStorage,
 };
 use std::ops::DerefMut;
 
@@ -16,6 +16,8 @@ impl<'a> System<'a> for WeaponrySystem {
     type SystemData = (
         Read<'a, DeltaTime>,
         Write<'a, SpawnQueue>,
+        WriteExpect<'a, PhysicWorld>,
+        ReadStorage<'a, Physic>,
         ReadStorage<'a, Faction>,
         ReadStorage<'a, Transform>,
         WriteStorage<'a, Weaponry>,
@@ -23,8 +25,13 @@ impl<'a> System<'a> for WeaponrySystem {
         ReadStorage<'a, WeaponAttack>,
     );
 
-    fn run(&mut self, (dt, mut spawn_queue, factions, transforms, mut weaponries, mut props, attacks): Self::SystemData) {
-        for (transform, weaponry, faction_opt) in (&transforms, &mut weaponries, (&factions).maybe()).join() {
+    fn run(
+        &mut self,
+        (dt, mut spawn_queue, mut pworld, physics, factions, transforms, mut weaponries, mut props, attacks): Self::SystemData,
+    ) {
+        for (transform, weaponry, faction_opt, physics_opt) in
+            (&transforms, &mut weaponries, (&factions).maybe(), (&physics).maybe()).join()
+        {
             if let Some((Some(mut prop), Some(attack))) = weaponry.primary.map(|w| (props.get_mut(w), attacks.get(w))) {
                 // handle reloading
                 if prop.clip == 0 {
@@ -40,11 +47,15 @@ impl<'a> System<'a> for WeaponrySystem {
                     if prop.cooldown == 0.0 {
                         let mut data = AttackPatternData {
                             shooter_faction: faction_opt.map(|f| &f.id),
+                            shooter_body: physics_opt
+                                .and_then(|p| pworld.bodies.get_mut(p.body))
+                                .and_then(|b| b.downcast_mut::<RigidBody<f32>>()),
                             shooting_at: transform.pos,
                             prop: prop,
                             projectiles: spawn_queue.deref_mut(),
                         };
                         attack.pattern.attack(&mut data);
+                        prop.cooldown = prop.cooldown_time;
                         prop.clip -= 1;
                     } else {
                         prop.cooldown = (prop.cooldown - dt.0.as_secs_f32()).max(0.0);
@@ -76,7 +87,7 @@ impl<'a> System<'a> for ProjectileSystem {
                     } else {
                         continue;
                     };
-                
+
                 hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
                 entities.delete(*dealer_e).unwrap();
             }

@@ -8,7 +8,7 @@ components:
         name: "Seaweed"
         description: "Green sea plant, usable for pratically nothing."
     Quality:
-        rarity: { rarity: "Common" }
+        rarity: { rarity: "common" }
     Stackable:
         stack_size: 4
         __default: true
