@@ -20,15 +20,16 @@ pub struct Game {
 }
 
 impl Game {
-    fn prespawn(&mut self) {
-        let queue = &mut self.world.write_resource::<SpawnQueue>().0;
-        queue.push_back(SpawnItem::Entity("player".into(), Point2f::new(300.0, 300.0)));
+    fn prespawn(&mut self, ctx: &mut Context) {
+        let player = entity::spawn_player(&self.world, ctx);
+        self.world.write_resource::<Camera>().target = Some(player);
     }
 
     pub fn new(ctx: &mut Context) -> Self {
         let imgui = ImGuiSystem::new(ctx);
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
+            .with(CameraSystem, "camera_system", &[])
             .with(WatchDeadSystem, "watch_dead_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &[])
@@ -44,6 +45,7 @@ impl Game {
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
+        world.insert(Camera::default());
         world.insert(UiHub::default());
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
@@ -74,7 +76,7 @@ impl Game {
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
-        game.prespawn();
+        game.prespawn(ctx);
         game
     }
 }
@@ -178,7 +180,9 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         let settings = self.world.read_resource::<Settings>();
+        let mut camera = self.world.write_resource::<Camera>();
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
+        camera.apply(ctx);
         if settings.is_debug_info {
             DebugInfoRenderSystem(ctx).run_now(&self.world);
         }
@@ -189,6 +193,7 @@ impl EventHandler for Game {
         if settings.is_debug_physic {
             DebugPhysicRenderSystem(ctx).run_now(&self.world);
         }
+        camera.revert(ctx);
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
     }

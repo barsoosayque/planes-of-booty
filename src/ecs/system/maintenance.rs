@@ -4,6 +4,18 @@ use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use specs::prelude::*;
 use std::ops::DerefMut;
 
+pub struct CameraSystem;
+impl<'a> System<'a> for CameraSystem {
+    type SystemData = (WriteExpect<'a, Camera>, Read<'a, DeltaTime>, ReadStorage<'a, Transform>);
+
+    fn run(&mut self, (mut camera, dt, transforms): Self::SystemData) {
+        if let Some(target_transform) = camera.target.and_then(|e| transforms.get(e)) {
+            let pos_dt = target_transform.pos - camera.pos;
+            camera.pos += pos_dt * dt.0.as_secs_f32() * 4.0;
+        }
+    }
+}
+
 pub struct InventoryMaintenanceSystem;
 impl<'a> System<'a> for InventoryMaintenanceSystem {
     type SystemData = WriteStorage<'a, Inventory>;
@@ -21,12 +33,13 @@ impl<'a> System<'a> for InputsSystem {
         WriteStorage<'a, Movement>,
         ReadStorage<'a, Transform>,
         Read<'a, Inputs>,
+        Read<'a, Camera>,
         ReadStorage<'a, tag::Player>,
         ReadStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
     );
 
-    fn run(&mut self, (mut movements, transforms, inputs, tag, weaponries, mut wpn_props): Self::SystemData) {
+    fn run(&mut self, (mut movements, transforms, inputs, camera, tag, weaponries, mut wpn_props): Self::SystemData) {
         for (movement, _) in (&mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
             if inputs.pressed_keys.contains(&KeyCode::W) {
@@ -46,7 +59,7 @@ impl<'a> System<'a> for InputsSystem {
         for (transform, weaponry, _) in (&transforms, &weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
                 props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
-                props.shooting_normal = (inputs.mouse_pos.to_vector() - transform.pos).normalize()
+                props.shooting_normal = (camera.project(&inputs.mouse_pos).to_vector() - transform.pos).normalize()
             }
         }
     }
@@ -86,7 +99,8 @@ impl<'s> System<'s> for UiSystem<'_> {
         if let Some(id) = hub.debug_window.selected_entity {
             if data.inputs.mouse_clicked.contains(&MouseButton::Left) {
                 log::debug!("Spawn {} using debug tools", id);
-                data.spawn_queue.0.push_back(SpawnItem::Entity(id.to_owned(), data.inputs.mouse_pos));
+                let pos = data.camera.project(&data.inputs.mouse_pos);
+                data.spawn_queue.0.push_back(SpawnItem::Entity(id.to_owned(), pos));
             } else if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
                 hub.debug_window.selected_entity = None;
             }

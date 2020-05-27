@@ -5,7 +5,7 @@ use crate::{
     math::{Point2f, Vec2f},
     ui::*,
 };
-use ggez::input;
+use ggez::{input, graphics};
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
@@ -17,6 +17,35 @@ use std::collections::{HashSet, VecDeque as Queue};
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(pub std::time::Duration);
+
+#[derive(Default, Debug)]
+pub struct Camera {
+    pub pos: Vec2f,
+    pub target: Option<Entity>,
+    draw_params: graphics::DrawParam
+}
+impl Camera {
+    pub fn apply(&mut self, ctx: &mut ggez::Context) {
+        let win_size = graphics::window(ctx).get_inner_size().unwrap();
+        self.draw_params = graphics::DrawParam::new()
+            .dest(Point2f::new(-self.pos.x + win_size.width as f32 * 0.5, -self.pos.y + win_size.height as f32 * 0.5));
+        graphics::push_transform(ctx, Some(self.draw_params.to_matrix()));
+        graphics::apply_transformations(ctx).unwrap();
+    }
+
+    pub fn revert(&self, ctx: &mut ggez::Context) {
+        graphics::pop_transform(ctx);
+        graphics::apply_transformations(ctx).unwrap();
+    }
+
+    pub fn project(&self, v: &Point2f) -> Point2f {
+         Point2f::new(v.x - self.draw_params.dest.x, v.y - self.draw_params.dest.y)
+    }
+
+    pub fn unproject(&self, v: &Point2f) -> Point2f {
+         Point2f::new(v.x + self.draw_params.dest.x, v.y + self.draw_params.dest.y)
+    }
+}
 
 pub struct PhysicWorld {
     pub mecha_world: DefaultMechanicalWorld<f32>,
@@ -112,6 +141,7 @@ pub struct UiData<'a> {
     pub inputs: Write<'a, Inputs>,
     pub settings: Write<'a, Settings>,
     pub assets: Write<'a, AssetManager>,
+    pub camera: Read<'a, Camera>,
 }
 #[derive(Default, Debug)]
 pub struct UiHub {
