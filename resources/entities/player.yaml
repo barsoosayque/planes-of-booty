@@ -36,7 +36,9 @@ components:
     HealthPool:
         max_hp: 300
         hp: 300
-    Weaponry: { __default: true }
+    Weaponry: 
+        primary: { item: "slingshot" }
+        __default: true
     Inventory: { __default: true }
     Transform: { __default: true }
     Directional: { __default: true }

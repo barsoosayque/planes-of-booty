@@ -25,9 +25,14 @@ components:
     SearchForTarget:
         from_factions: [ { faction: "good" } ]
         radius: 200.0
+    ShootTarget: 
+        radius: 200.0
     FollowTarget:
         keep_distance: 80.0
         follow_distance: 500.0
+    Weaponry:
+        primary: { item: "slingshot" }
+        __default: true
     Target: { __default: true }
     Transform: { __default: true }
     Faction:

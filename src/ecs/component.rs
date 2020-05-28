@@ -194,7 +194,7 @@ pub enum CollisionGroup {
 //////////////////////
 
 #[derive(Default, Debug, Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct Target {
     pub target: Option<Entity>,
 }
@@ -210,6 +210,12 @@ pub struct FollowTarget {
 #[storage(VecStorage)]
 pub struct SearchForTarget {
     pub from_factions: Set<FactionId>,
+    pub radius: f32,
+}
+
+#[derive(Default, Component)]
+#[storage(VecStorage)]
+pub struct ShootTarget {
     pub radius: f32,
 }
 

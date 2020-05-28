@@ -32,6 +32,7 @@ pub enum PartValue {
     CollisionGroup(String),
     Rarity(String),
     AttackPattern(String),
+    Item(String),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
     Single { value: Box<PartValue> },
     Size { width: f32, height: f32 },
@@ -54,6 +55,7 @@ impl std::fmt::Display for PartValue {
             PartValue::Bool(value) => write!(f, "{}", value),
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
+            PartValue::Item(id) => write!(f, "crate::item::spawn_{}(world, ctx, assets).into()", id),
             PartValue::CollisionGroup(group) => {
                 write!(f, "(component::CollisionGroup::{} as usize)", group.to_camel_case())
             },
@@ -214,6 +216,7 @@ impl<'de> Visitor<'de> for PartValueVisitor {
                 ("collision_group", PartValue::Str(value)) => return Ok(PartValue::CollisionGroup(value)),
                 ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
                 ("rarity", PartValue::Str(value)) => return Ok(PartValue::Rarity(value)),
+                ("item", PartValue::Str(value)) => return Ok(PartValue::Item(value)),
                 ("attack_pattern", PartValue::Str(value)) => return Ok(PartValue::AttackPattern(value)),
                 (key, value) => {
                     buffer.insert(key.to_owned(), value);

@@ -1,3 +1,4 @@
+use crate::read_modified;
 use super::super::{component::*, resource::*, tag};
 use crate::{attack::AttackPatternData, math::*};
 use nphysics2d::{
@@ -187,6 +188,33 @@ impl<'a> System<'a> for PhysicTransformSyncSystem {
     }
 }
 
+#[derive(Default)]
+pub struct ShootTargetSystem;
+impl<'a> System<'a> for ShootTargetSystem {
+    type SystemData = (
+        WriteStorage<'a, WeaponProperties>,
+        ReadStorage<'a, Weaponry>,
+        ReadStorage<'a, Target>,
+        ReadStorage<'a, ShootTarget>,
+        ReadStorage<'a, Transform>,
+    );
+
+    fn run(&mut self, (mut wpn_props, weaponry, targets, shoot_targets, transforms): Self::SystemData) {
+        for (transform, weaponry, target, shoot_target) in (&transforms, &weaponry, &targets, &shoot_targets).join() {
+            if let (Some(target), Some(wpn_prop)) = (target.target, weaponry.primary.and_then(|w| wpn_props.get_mut(w))) {
+                let target_transform = transforms.get(target).unwrap();
+                let area = Circle2f::new(transform.pos.to_point(), shoot_target.radius);
+                if area.contains(target_transform.pos.to_point()) {
+                    wpn_prop.is_shooting = true;
+                    wpn_prop.shooting_normal = (target_transform.pos - transform.pos).normalize()
+                } else {
+                    wpn_prop.is_shooting = false;
+                }
+            }
+        }
+    }
+}
+
 pub struct SearchForTargetSystem;
 impl<'a> System<'a> for SearchForTargetSystem {
     type SystemData = (
@@ -199,15 +227,15 @@ impl<'a> System<'a> for SearchForTargetSystem {
 
     fn run(&mut self, (entities, mut targets, searches, factions, transforms): Self::SystemData) {
         for (e_target, transform, faction) in (&entities, &transforms, &factions).join() {
-            for (e, target, search, search_transform) in (&entities, &mut targets, &searches, &transforms).join() {
-                if target.target.is_some() {
+            for (e, mut target, search, search_transform) in (&entities, &mut targets.restrict_mut(), &searches, &transforms).join() {
+                if target.get_unchecked().target.is_some() {
                     continue;
                 }
 
                 let area = Circle2f::new(search_transform.pos.to_point(), search.radius);
                 if search.from_factions.contains(&faction.id) && area.contains(transform.pos.to_point()) {
                     log::debug!("{:?} found new target {:?}", e, e_target);
-                    target.target = Some(e_target)
+                    target.get_mut_unchecked().target = Some(e_target)
                 }
             }
         }
@@ -225,14 +253,14 @@ impl<'a> System<'a> for FollowTargetSystem {
     );
 
     fn run(&mut self, (entities, follows, mut targets, mut movements, transforms): Self::SystemData) {
-        for (e, follow, target, movement, transform) in
-            (&entities, &follows, &mut targets, &mut movements, &transforms).join()
+        for (e, follow, mut target, movement, transform) in
+            (&entities, &follows, &mut targets.restrict_mut(), &mut movements, &transforms).join()
         {
-            if let Some(target_transform) = target.target.and_then(|e| transforms.get(e)) {
+            if let Some(target_transform) = target.get_unchecked().target.and_then(|e| transforms.get(e)) {
                 let pos_delta = target_transform.pos - transform.pos;
                 let distance = pos_delta.length();
                 if distance > follow.follow_distance {
-                    target.target = None;
+                    target.get_mut_unchecked().target = None;
                     movement.target_acceleration_normal = Vec2f::zero();
                     log::debug!("{:?} lost its target: target too far.", e);
                 } else {
@@ -307,15 +335,7 @@ impl<'a> System<'a> for DirectionalCollidersSystem {
     type SystemData = (ReadStorage<'a, Directional>, WriteStorage<'a, Physic>, WriteExpect<'a, PhysicWorld>);
 
     fn run(&mut self, (directionals, mut physics, mut world): Self::SystemData) {
-        self.modified.clear();
-        for event in directionals.channel().read(self.reader_id.as_mut().unwrap()) {
-            match event {
-                ComponentEvent::Modified(id) => {
-                    self.modified.add(*id);
-                },
-                _ => (),
-            };
-        }
+        read_modified!(directionals => self.reader_id.as_mut().unwrap() => self.modified);
 
         for (direction, physic, _) in (&directionals, &mut physics, &self.modified).join() {
             if let CollideShapeHandle::Directional { north, east, south, west } = &physic.collide.1 {
@@ -352,15 +372,7 @@ impl<'a> System<'a> for SpriteDamageBlinkSystem {
             blinks.remove(e);
         }
 
-        self.modified.clear();
-        for event in hpools.channel().read(self.reader_id.as_mut().unwrap()) {
-            match event {
-                ComponentEvent::Modified(id) => {
-                    self.modified.add(*id);
-                },
-                _ => (),
-            };
-        }
+        read_modified!(hpools => self.reader_id.as_mut().unwrap() => self.modified);
 
         for (e, _) in (&entities, &self.modified).join() {
             blinks.insert(e, SpriteBlink { frames_left: 4 }).unwrap();

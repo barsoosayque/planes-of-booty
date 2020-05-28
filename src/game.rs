@@ -21,7 +21,7 @@ pub struct Game {
 
 impl Game {
     fn prespawn(&mut self, ctx: &mut Context) {
-        let player = entity::spawn_player(&self.world, ctx);
+        let player = entity::spawn_player(&self.world, ctx, &mut self.world.write_resource::<AssetManager>());
         self.world.write_resource::<Camera>().target = Some(player);
     }
 
@@ -34,7 +34,8 @@ impl Game {
             .with(WatchDeadSystem, "watch_dead_system", &[])
             .with(DestructionSystem, "destruction_system", &["watch_dead_system"])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
-            .with(FollowTargetSystem, "follow_target_system", &[])
+            .with(FollowTargetSystem, "follow_target_system", &["search_for_target_system"])
+            .with(ShootTargetSystem, "shoot_target_system", &["search_for_target_system"])
             .with(InputsSystem, "inputs_system", &[])
             .with(DirectionalSystem, "directional_system", &[])
             .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
@@ -64,6 +65,7 @@ impl Game {
         world.register::<Target>();
         world.register::<SearchForTarget>();
         world.register::<FollowTarget>();
+        world.register::<ShootTarget>();
         world.register::<Faction>();
         world.register::<Physic>();
         world.register::<Directional>();
@@ -115,15 +117,16 @@ impl EventHandler for Game {
 
         // Systems can spawn new stuff using SpawnQueue resource
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
+            let mut assets = self.world.write_resource::<AssetManager>();
             match item {
                 SpawnItem::Entity(id, pos) => {
-                    let e = entity::spawn(&id, &self.world, ctx);
+                    let e = entity::spawn(&id, &self.world, ctx, &mut assets);
                     if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
                         transform.pos = pos.to_vector();
                     }
                 },
                 SpawnItem::Item(id, count, to_e) => {
-                    let e = item::spawn(&id, &self.world, ctx);
+                    let e = item::spawn(&id, &self.world, ctx, &mut assets);
                     if let Some(stack) = self.world.write_storage::<Stackable>().get_mut(e) {
                         stack.current = count;
                     }
@@ -132,7 +135,6 @@ impl EventHandler for Game {
                     }
                 },
                 SpawnItem::Projectile(def) => {
-                    let mut assets = self.world.write_resource::<AssetManager>();
                     let mut phys_world = self.world.write_resource::<PhysicWorld>();
                     let body = phys_world.bodies.insert(
                         RigidBodyDesc::new()
@@ -150,7 +152,9 @@ impl EventHandler for Game {
                             .collision_groups(
                                 CollisionGroups::new()
                                     .with_membership(&[CollisionGroup::Projectiles as usize])
-                                    .with_blacklist(&def.ignore_groups.into_iter().map(|g| g as usize).collect::<Vec<usize>>()),
+                                    .with_blacklist(
+                                        &def.ignore_groups.into_iter().map(|g| g as usize).collect::<Vec<usize>>(),
+                                    ),
                             )
                             .build(BodyPartHandle(body, 0)),
                     );

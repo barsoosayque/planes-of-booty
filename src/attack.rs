@@ -68,7 +68,7 @@ impl AttackPattern for Slingshot {
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
-            size: Size2f::new(15.0, 15.0),
+            size: Size2f::new(10.0, 10.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
         };
         data.projectiles.build(def);
