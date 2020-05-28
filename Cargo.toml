@@ -12,7 +12,7 @@ imgui = "0.3.0"
 imgui-gfx-renderer = "0.3.0"
 
 nphysics2d = "0.15.1"
-euclid = { version = "0.20.11", features = ["mint"] }
+euclid = { version = "0.20.13", features = ["mint"] }
 
 anyhow = "1.0.31"
 log = "0.4.8"
@@ -22,10 +22,14 @@ rand = "0.7.3"
 
 [patch.crates-io]
 # using imgui-rs with tooltip token patches
+# see: https://github.com/Gekkio/imgui-rs/pull/327
 imgui = { git = "https://github.com/barsoosayque/imgui-rs.git", branch = 'tooltip-patch' }
 # using ggez with some patches to allow images to work with imgui
-# probably next ggez version will include changes like this (they are in on devel branch)
+# probably next ggez version will include changes like this (they are on devel branch)
 ggez = { git = "https://github.com/barsoosayque/ggez.git" }
+# using euclid with patch which implements default trait for angles
+# see: https://github.com/servo/euclid/pull/436
+euclid  = { git = "https://github.com/barsoosayque/euclid.git" }
 
 [build-dependencies]
 anyhow = "1.0.31"

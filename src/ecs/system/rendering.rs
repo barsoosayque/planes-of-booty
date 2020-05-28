@@ -20,7 +20,7 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
         if let Some((sprite, size)) =
             ui_hub.debug_window.selected_entity.and_then(|id| entity::view(id, self.0, &mut assets))
         {
-            render_sprite(self.0, &sprite, &inputs.mouse_pos.to_vector(), &size);
+            render_sprite(self.0, &sprite, &inputs.mouse_pos.to_vector(), &Angle2f::zero(), &size);
         }
 
         self.1.render(self.0);
@@ -28,7 +28,7 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
         if let Some(Sprite { asset: SpriteAsset::Single { value }, .. }) =
             ui_hub.inventory_window.dragging_item().and_then(|item| sprites.get(item))
         {
-            render_sprite(self.0, &value, &inputs.mouse_pos.to_vector(), &Size2f::new(50.0, 50.0));
+            render_sprite(self.0, &value, &inputs.mouse_pos.to_vector(), &Angle2f::zero(), &Size2f::new(50.0, 50.0));
         }
     }
 }
@@ -42,18 +42,40 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
             match &sprite.asset {
                 SpriteAsset::Single { value } => {
-                    render_sprite(self.0, &value, &transform.pos, &sprite.size);
+                    render_sprite(self.0, &value, &transform.pos, &transform.rotation, &sprite.size);
                 },
                 SpriteAsset::Directional { north, east, south, west } => {
                     if let Some(Directional { direction}) = directional_opt {
                         let img = directional!(direction => &north, &east, &south, &west);
-                        render_sprite(self.0, &img, &transform.pos, &sprite.size);
+                        render_sprite(self.0, &img, &transform.pos, &transform.rotation, &sprite.size);
                     }
                 },
             }
         }
     }
 }
+
+// pub struct MapRenderingSystem<'a>(pub &'a mut Context);
+// impl<'a> System<'a> for SpriteRenderSystem<'_> {
+//     type SystemData =
+//         (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
+
+//     fn run(&mut self, (transforms, sprites, directionals): Self::SystemData) {
+//         for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
+//             match &sprite.asset {
+//                 SpriteAsset::Single { value } => {
+//                     render_sprite(self.0, &value, &transform.pos, &sprite.size);
+//                 },
+//                 SpriteAsset::Directional { north, east, south, west } => {
+//                     if let Some(Directional { direction}) = directional_opt {
+//                         let img = directional!(direction => &north, &east, &south, &west);
+//                         render_sprite(self.0, &img, &transform.pos, &sprite.size);
+//                     }
+//                 },
+//             }
+//         }
+//     }
+// }
 
 pub struct DebugTargetRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for DebugTargetRenderSystem<'_> {
