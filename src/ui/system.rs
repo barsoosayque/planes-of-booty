@@ -110,7 +110,7 @@ impl ImGuiSystem {
         let mut ui = self.imgui.frame();
         let mut ctx = UiContext(self.renderer.get_mut(), ctx);
         builder.build(&mut ui, &mut ctx, data);
-        let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::ANY_WINDOW);
+        let hovered = ui.is_window_hovered_with_flags(imgui::WindowHoveredFlags::all());
 
         unsafe {
             // bypass lifetime since it's not public and
