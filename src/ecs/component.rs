@@ -1,8 +1,4 @@
-use crate::{
-    assets::*,
-    attack::AttackPattern,
-    math::{Direction, Size2f, Vec2f},
-};
+use crate::{assets::*, attack::AttackPattern, math::*};
 use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
@@ -143,7 +139,7 @@ pub struct WeaponProperties {
     pub cooldown: f32,
 
     pub damage: u32,
-    pub accuracy: f32
+    pub accuracy: f32,
 }
 
 #[derive(Component)]
@@ -170,7 +166,7 @@ pub type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 #[storage(FlaggedStorage)]
 pub struct Transform {
     pub pos: Vec2f,
-    pub rotation: f32,
+    pub rotation: Angle2f,
 }
 
 #[derive(Default, Debug, Component)]

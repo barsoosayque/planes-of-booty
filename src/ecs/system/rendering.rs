@@ -1,19 +1,19 @@
 use super::{
     super::{component::*, resource::*},
-    render_fill_circle, render_line, render_polygon, render_sprite, render_stroke_circle,
+    render_fill_circle, render_fill_sprite, render_line, render_polygon, render_sprite, render_stroke_circle,
 };
-use crate::{assets::AssetManager, entity, math::*, ui::ImGuiSystem};
+use crate::{
+    assets::{AssetManager, ImageAsset},
+    entity,
+    math::*,
+    ui::ImGuiSystem,
+};
 use ggez::{graphics, Context};
 use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
 
 pub struct UiRenderSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiRenderSystem<'_> {
-    type SystemData = (
-        ReadStorage<'a, Sprite>,
-        Read<'a, UiHub>,
-        Read<'a, Inputs>,
-        Write<'a, AssetManager>,
-    );
+    type SystemData = (ReadStorage<'a, Sprite>, Read<'a, UiHub>, Read<'a, Inputs>, Write<'a, AssetManager>);
 
     fn run(&mut self, (sprites, ui_hub, inputs, mut assets): Self::SystemData) {
         // spawn selected debug item under cursor
@@ -35,8 +35,7 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
 
 pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for SpriteRenderSystem<'_> {
-    type SystemData =
-        (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
+    type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
 
     fn run(&mut self, (transforms, sprites, directionals): Self::SystemData) {
         for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
@@ -45,7 +44,7 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
                     render_sprite(self.0, &value, &transform.pos, &transform.rotation, &sprite.size);
                 },
                 SpriteAsset::Directional { north, east, south, west } => {
-                    if let Some(Directional { direction}) = directional_opt {
+                    if let Some(Directional { direction }) = directional_opt {
                         let img = directional!(direction => &north, &east, &south, &west);
                         render_sprite(self.0, &img, &transform.pos, &transform.rotation, &sprite.size);
                     }
@@ -55,27 +54,24 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
     }
 }
 
-// pub struct MapRenderingSystem<'a>(pub &'a mut Context);
-// impl<'a> System<'a> for SpriteRenderSystem<'_> {
-//     type SystemData =
-//         (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
+pub struct MapRenderingSystem<'a>(pub &'a mut Context);
+impl<'a> System<'a> for MapRenderingSystem<'_> {
+    type SystemData = (Read<'a, Camera>, Write<'a, AssetManager>);
 
-//     fn run(&mut self, (transforms, sprites, directionals): Self::SystemData) {
-//         for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
-//             match &sprite.asset {
-//                 SpriteAsset::Single { value } => {
-//                     render_sprite(self.0, &value, &transform.pos, &sprite.size);
-//                 },
-//                 SpriteAsset::Directional { north, east, south, west } => {
-//                     if let Some(Directional { direction}) = directional_opt {
-//                         let img = directional!(direction => &north, &east, &south, &west);
-//                         render_sprite(self.0, &img, &transform.pos, &sprite.size);
-//                     }
-//                 },
-//             }
-//         }
-//     }
-// }
+    fn run(&mut self, (camera, mut assets): Self::SystemData) {
+        let size = graphics::window(self.0).get_inner_size().unwrap();
+        let bg = assets.get::<ImageAsset>("/sprites/map/water.png", self.0).unwrap();
+
+        render_fill_sprite(
+            self.0,
+            &bg,
+            &((camera.pos / 50.0).floor() * 50.0),
+            &Angle2f::zero(),
+            &Size2f::new(50.0, 50.0),
+            &Size2f::new(size.width as f32 + 100.0, size.height as f32 + 100.0),
+        );
+    }
+}
 
 pub struct DebugTargetRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for DebugTargetRenderSystem<'_> {
@@ -113,7 +109,9 @@ impl<'a> System<'a> for DebugInfoRenderSystem<'_> {
     type SystemData = (Entities<'a>, ReadStorage<'a, Transform>, ReadStorage<'a, Target>, ReadStorage<'a, HealthPool>);
 
     fn run(&mut self, (entities, transforms, targets, hpools): Self::SystemData) {
-        for (e, transform, target_opt, hpool_opt) in (&entities, &transforms, (&targets).maybe(), (&hpools).maybe()).join() {
+        for (e, transform, target_opt, hpool_opt) in
+            (&entities, &transforms, (&targets).maybe(), (&hpools).maybe()).join()
+        {
             let mut text = format!("{:?}\nTransform({:.1}, {:.1})", e, transform.pos.x, transform.pos.y);
             if let Some(target) = target_opt {
                 text.push_str(&format!("\n{:?}", target));

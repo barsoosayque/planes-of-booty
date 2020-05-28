@@ -1,5 +1,6 @@
 use super::{component::*, tag};
 use crate::{
+    map::{Generator, Chunk},
     assets::AssetManager,
     attack::{ProjectileBuilder, ProjectileDef},
     math::{Point2f, Vec2f},
@@ -45,6 +46,12 @@ impl Camera {
     pub fn unproject(&self, v: &Point2f) -> Point2f {
          Point2f::new(v.x + self.draw_params.dest.x, v.y + self.draw_params.dest.y)
     }
+}
+
+#[derive(Default, Debug)]
+pub struct ChunkMap {
+    pub chunks: Vec<Chunk>,
+    pub generator: Generator
 }
 
 pub struct PhysicWorld {

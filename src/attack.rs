@@ -68,7 +68,7 @@ impl AttackPattern for Slingshot {
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
-            size: Size2f::new(10.0, 10.0),
+            size: Size2f::new(15.0, 15.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
         };
         data.projectiles.build(def);
@@ -85,12 +85,12 @@ impl AttackPattern for Crossbow {
 
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
-            asset: "/sprites/projectile/simple.png".to_owned(),
+            asset: "/sprites/projectile/bolt.png".to_owned(),
             damage: data.prop.damage,
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
-            size: Size2f::new(10.0, 10.0),
+            size: Size2f::new(15.0, 7.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
         };
         data.projectiles.build(def);

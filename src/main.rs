@@ -15,6 +15,7 @@ mod entity;
 mod game;
 mod item;
 mod ui;
+mod map;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};

@@ -1,6 +1,6 @@
-use ggez::graphics::{FilterMode, Image};
+use ggez::graphics::{FilterMode, Image, WrapMode};
 use log::debug;
-use std::{any::Any, collections::BTreeMap, sync::Arc};
+use std::{any::Any, cell::UnsafeCell, collections::BTreeMap, sync::Arc};
 
 #[derive(Default)]
 pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>, u32);
@@ -24,10 +24,34 @@ pub trait Asset: Sized + Send + Sync {
     fn id(&self) -> u32;
 }
 
+#[derive(Debug)]
+pub struct LazyAsset<A: Asset>(String, UnsafeCell<Option<Arc<A>>>);
+impl<A: Asset + 'static> LazyAsset<A> {
+    pub fn new(key: &str) -> Self { Self(key.to_owned(), UnsafeCell::new(None)) }
+
+    pub fn try_get<'a>(&'a self) -> Option<&'a A> {
+        unsafe { self.1.get().as_ref().and_then(|opt| opt.as_ref()).map(|arc| arc.as_ref()) }
+    }
+
+    pub fn get<'a>(&'a self, assets: &mut AssetManager, ctx: &mut A::Context) -> anyhow::Result<&'a A> {
+        unsafe {
+            match self.1.get().as_ref().and_then(|opt| opt.as_ref()) {
+                Some(asset) => Ok(asset),
+                None => {
+                    self.1.get().replace(Some(assets.get::<A>(&self.0, ctx)?));
+                    Ok(self.1.get().as_ref().unwrap().as_ref().unwrap())
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ImageAsset(u32, Image);
+pub type LazyImageAsset = LazyAsset<ImageAsset>;
 impl std::ops::Deref for ImageAsset {
     type Target = Image;
+
     fn deref(&self) -> &Self::Target { &self.1 }
 }
 impl AsRef<Image> for ImageAsset {
@@ -41,6 +65,7 @@ impl Asset for ImageAsset {
         debug!("Loading image asset {:?}", key);
         let mut img = Image::new(ctx, key)?;
         img.set_filter(FilterMode::Linear);
+        img.set_wrap(WrapMode::Tile, WrapMode::Tile);
         Ok(ImageAsset(id, img).into())
     }
 

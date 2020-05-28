@@ -20,6 +20,25 @@ pub fn render_sprite(ctx: &mut ggez::Context, sprite: &graphics::Image, pos: &Ve
     graphics::draw(ctx, sprite, param).unwrap();
 }
 
+pub fn render_fill_sprite(
+    ctx: &mut ggez::Context,
+    sprite: &graphics::Image,
+    pos: &Vec2f,
+    angle: &Angle2f,
+    tile_size: &Size2f,
+    size: &Size2f,
+) {
+    let scale = Vec2f::new(tile_size.width / sprite.width() as f32, tile_size.height / sprite.height() as f32);
+
+    let param = graphics::DrawParam::default()
+        .src([0.0, 0.0, size.width / tile_size.width, size.height / tile_size.height].into())
+        .scale(scale)
+        .offset(Point2f::new(0.5, 0.5))
+        .rotation(angle.radians)
+        .dest(pos.to_point());
+    graphics::draw(ctx, sprite, param).unwrap();
+}
+
 fn render_circle(ctx: &mut ggez::Context, pos: &Point2f, radius: f32, color: u32, mode: graphics::DrawMode) {
     let color = graphics::Color::from_rgba_u32(color);
     let circle = graphics::Mesh::new_circle(ctx, mode, Point2f::zero(), radius, 0.5, color).unwrap();

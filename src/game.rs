@@ -154,7 +154,7 @@ impl EventHandler for Game {
                     let entity = self
                         .world
                         .create_entity_unchecked()
-                        .with(Transform::default())
+                        .with(Transform { pos: def.pos, rotation: def.velocity.angle_from_x_axis() })
                         .with(DistanceLimited { limit: def.distance })
                         .with(DistanceCounter::default())
                         .with(DamageDealer { damage: def.damage })
@@ -180,9 +180,9 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         let settings = self.world.read_resource::<Settings>();
-        let mut camera = self.world.write_resource::<Camera>();
+        self.world.write_resource::<Camera>().apply(ctx);
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
-        camera.apply(ctx);
+        MapRenderingSystem(ctx).run_now(&self.world);
         if settings.is_debug_info {
             DebugInfoRenderSystem(ctx).run_now(&self.world);
         }
@@ -193,7 +193,7 @@ impl EventHandler for Game {
         if settings.is_debug_physic {
             DebugPhysicRenderSystem(ctx).run_now(&self.world);
         }
-        camera.revert(ctx);
+        self.world.write_resource::<Camera>().revert(ctx);
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
     }
