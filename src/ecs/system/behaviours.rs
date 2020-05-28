@@ -1,4 +1,4 @@
-use super::super::{component::*, resource::*};
+use super::super::{component::*, resource::*, tag};
 use crate::{attack::AttackPatternData, math::*};
 use nphysics2d::{
     algebra::ForceType,
@@ -6,8 +6,8 @@ use nphysics2d::{
     object::{Body, RigidBody},
 };
 use specs::{
-    storage::ComponentEvent, BitSet, Entities, Join, Read, ReadExpect, ReadStorage, ReaderId, System, SystemData,
-    World, WorldExt, Write, WriteExpect, WriteStorage, Entity
+    storage::ComponentEvent, BitSet, Entities, Entity, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
+    SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
 };
 use std::ops::DerefMut;
 
@@ -67,10 +67,14 @@ impl<'a> System<'a> for WeaponrySystem {
 }
 pub struct ProjectileSystem;
 impl<'a> System<'a> for ProjectileSystem {
-    type SystemData =
-        (Entities<'a>, ReadExpect<'a, PhysicWorld>, WriteStorage<'a, HealthPool>, ReadStorage<'a, DamageDealer>);
+    type SystemData = (
+        ReadExpect<'a, PhysicWorld>,
+        WriteStorage<'a, HealthPool>,
+        ReadStorage<'a, DamageDealer>,
+        WriteStorage<'a, tag::PendingDestruction>,
+    );
 
-    fn run(&mut self, (entities, physic_world, mut hpools, ddealers): Self::SystemData) {
+    fn run(&mut self, (physic_world, mut hpools, ddealers, mut to_destruct): Self::SystemData) {
         use nphysics2d::ncollide2d::query::Proximity;
         for proximity in physic_world.geometry_world.proximity_events() {
             if proximity.new_status == Proximity::Intersecting {
@@ -89,7 +93,7 @@ impl<'a> System<'a> for ProjectileSystem {
                     };
 
                 hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
-                entities.delete(*dealer_e).unwrap();
+                to_destruct.insert(*dealer_e, tag::PendingDestruction).unwrap();
             }
         }
     }

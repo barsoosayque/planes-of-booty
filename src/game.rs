@@ -32,6 +32,7 @@ impl Game {
             .with(CameraSystem, "camera_system", &[])
             .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
             .with(WatchDeadSystem, "watch_dead_system", &[])
+            .with(DestructionSystem, "destruction_system", &["watch_dead_system"])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &[])
             .with(InputsSystem, "inputs_system", &[])

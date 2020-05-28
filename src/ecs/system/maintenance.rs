@@ -67,13 +67,33 @@ impl<'a> System<'a> for InputsSystem {
 
 pub struct WatchDeadSystem;
 impl<'a> System<'a> for WatchDeadSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, HealthPool>);
+    type SystemData = (Entities<'a>, ReadStorage<'a, HealthPool>, WriteStorage<'a, tag::PendingDestruction>);
 
-    fn run(&mut self, (entities, hpools): Self::SystemData) {
+    fn run(&mut self, (entities, hpools, mut to_destruct): Self::SystemData) {
         for (e, hpool) in (&entities, &hpools).join() {
             if hpool.hp <= 0 {
-                entities.delete(e).unwrap();
+                to_destruct.insert(e, tag::PendingDestruction).unwrap();
             }
+        }
+    }
+}
+
+pub struct DestructionSystem;
+impl<'a> System<'a> for DestructionSystem {
+    type SystemData = (
+        Entities<'a>,
+        WriteExpect<'a, PhysicWorld>,
+        ReadStorage<'a, tag::PendingDestruction>,
+        ReadStorage<'a, Physic>,
+    );
+
+    fn run(&mut self, (entities, mut pworld, to_destruct, physics): Self::SystemData) {
+        for (e, physics_opt, _) in (&entities, (&physics).maybe(), &to_destruct).join() {
+            if let Some(physic) = physics_opt {
+                pworld.colliders.remove(physic.collide.0);
+                pworld.bodies.remove(physic.body);
+            }
+            entities.delete(e).unwrap();
         }
     }
 }
