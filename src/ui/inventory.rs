@@ -88,10 +88,11 @@ macro_rules! item_tooltip {
         if let (Some(attack), Some(props)) = ($data.wpn_attacks.get($item), $data.wpn_props.get($item)) {
             $ui.separator();
             $ui.text_colored([0.78, 0.23, 0.20, 1.0], im_str!("It's a weapon:"));
-            $ui.text(&ImString::new(&format!(
-                "> Clip size: {}\n> Reloading time: {:.2} sec\n> Cooling time: {:.2} sec",
-                props.clip_size, props.reloading_time, props.cooldown_time
-            )));
+            $ui.text(format!("* Damage: {}", props.damage));
+            $ui.text(format!("* Accuracy: {:.0}%", (props.accuracy * 100.0).floor()));
+            $ui.text(format!("* Clip size: {}", props.clip_size));
+            $ui.text(format!("* Reloading time: {:.2}", props.reloading_time));
+            $ui.text(format!("* Cooling speed: {:.2}", props.cooldown_time));
             $ui.text(&ImString::new(attack.pattern.description()));
         }
         if let Some(quality) = $data.qualities.get($item) {
