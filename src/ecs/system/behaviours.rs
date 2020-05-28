@@ -7,7 +7,7 @@ use nphysics2d::{
 };
 use specs::{
     storage::ComponentEvent, BitSet, Entities, Join, Read, ReadExpect, ReadStorage, ReaderId, System, SystemData,
-    World, WorldExt, Write, WriteExpect, WriteStorage,
+    World, WorldExt, Write, WriteExpect, WriteStorage, Entity
 };
 use std::ops::DerefMut;
 
@@ -324,5 +324,47 @@ impl<'a> System<'a> for DirectionalCollidersSystem {
     fn setup(&mut self, world: &mut World) {
         Self::SystemData::setup(world);
         self.reader_id = Some(world.write_storage::<Directional>().register_reader());
+    }
+}
+
+#[derive(Default)]
+pub struct SpriteDamageBlinkSystem {
+    reader_id: Option<ReaderId<ComponentEvent>>,
+    modified: BitSet,
+}
+impl<'a> System<'a> for SpriteDamageBlinkSystem {
+    type SystemData = (Entities<'a>, WriteStorage<'a, SpriteBlink>, ReadStorage<'a, HealthPool>);
+
+    fn run(&mut self, (entities, mut blinks, hpools): Self::SystemData) {
+        let mut remove_queue: Vec<Entity> = vec![];
+        for (e, blink) in (&entities, &mut blinks).join() {
+            if blink.frames_left == 0 {
+                remove_queue.push(e);
+            } else {
+                blink.frames_left -= 1;
+            }
+        }
+        for e in remove_queue {
+            blinks.remove(e);
+        }
+
+        self.modified.clear();
+        for event in hpools.channel().read(self.reader_id.as_mut().unwrap()) {
+            match event {
+                ComponentEvent::Modified(id) => {
+                    self.modified.add(*id);
+                },
+                _ => (),
+            };
+        }
+
+        for (e, _) in (&entities, &self.modified).join() {
+            blinks.insert(e, SpriteBlink { frames_left: 4 }).unwrap();
+        }
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(world.write_storage::<HealthPool>().register_reader());
     }
 }

@@ -1,6 +1,8 @@
-use ggez::graphics::{FilterMode, Image, WrapMode};
+use ggez::graphics::{FilterMode, Image, Shader, WrapMode};
+use gfx::{memory::Pod, shade::ConstFormat, pso::buffer::Structure};
 use log::debug;
 use std::{any::Any, cell::UnsafeCell, collections::BTreeMap, sync::Arc};
+use crate::shader::ShaderInName;
 
 #[derive(Default)]
 pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>, u32);
@@ -40,7 +42,7 @@ impl<A: Asset + 'static> LazyAsset<A> {
                 None => {
                     self.1.get().replace(Some(assets.get::<A>(&self.0, ctx)?));
                     Ok(self.1.get().as_ref().unwrap().as_ref().unwrap())
-                }
+                },
             }
         }
     }
@@ -67,6 +69,33 @@ impl Asset for ImageAsset {
         img.set_filter(FilterMode::Linear);
         img.set_wrap(WrapMode::Tile, WrapMode::Tile);
         Ok(ImageAsset(id, img).into())
+    }
+
+    fn id(&self) -> u32 { self.0 }
+}
+
+#[derive(Debug, Clone)]
+pub struct ShaderAsset<C: Clone + Copy + Pod + Structure<ConstFormat>>(u32, Shader<C>);
+impl<C: Copy + Clone + Pod + Structure<ConstFormat>> std::ops::Deref for ShaderAsset<C> {
+    type Target = Shader<C>;
+
+    fn deref(&self) -> &Self::Target { &self.1 }
+}
+impl<C: Copy + Clone + Pod + Structure<ConstFormat>> AsRef<Shader<C>> for ShaderAsset<C> {
+     fn as_ref(&self) -> &Shader<C> { &self.1 }
+}
+
+impl<C: 'static + Default + ShaderInName + Sync + Send + Copy + Clone + Pod + Structure<ConstFormat>> Asset for ShaderAsset<C> {
+    type Context = ggez::Context;
+
+    fn load(key: &str, id: u32, ctx: &mut Self::Context) -> anyhow::Result<Self> {
+        // hardcoded for now
+        let vert = "/shaders/default.vert";
+        let frag = key;
+        debug!("Loading shader asset ({}, {})", vert, frag);
+
+        let shader = Shader::new(ctx, vert, frag, C::default(), C::name(), None)?;
+        Ok(ShaderAsset(id, shader).into())
     }
 
     fn id(&self) -> u32 { self.0 }

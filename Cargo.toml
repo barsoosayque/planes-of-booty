@@ -7,6 +7,7 @@ build = "build/build.rs"
 
 [dependencies]
 ggez = "0.5.1"
+gfx = "0.18.2"
 specs = { version = "0.16.1", features = ["specs-derive", "shred-derive", "parallel", "storage-event-control"] }
 imgui = "0.3.0"
 imgui-gfx-renderer = "0.3.0"

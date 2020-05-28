@@ -2,12 +2,7 @@ use super::{
     super::{component::*, resource::*},
     render_fill_circle, render_fill_sprite, render_line, render_polygon, render_sprite, render_stroke_circle,
 };
-use crate::{
-    assets::{AssetManager, ImageAsset},
-    entity,
-    math::*,
-    ui::ImGuiSystem,
-};
+use crate::{assets::*, entity, math::*, shader, ui::ImGuiSystem};
 use ggez::{graphics, Context};
 use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
 
@@ -35,10 +30,26 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
 
 pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for SpriteRenderSystem<'_> {
-    type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, Sprite>, ReadStorage<'a, Directional>);
+    type SystemData = (
+        Write<'a, AssetManager>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, Sprite>,
+        ReadStorage<'a, SpriteBlink>,
+        ReadStorage<'a, Directional>,
+    );
 
-    fn run(&mut self, (transforms, sprites, directionals): Self::SystemData) {
-        for (transform, sprite, directional_opt) in (&transforms, &sprites, (&directionals).maybe()).join() {
+    fn run(&mut self, (mut assets, transforms, sprites, blinks, directionals): Self::SystemData) {
+        let blink_sh = assets.get::<ShaderAsset<shader::Silhouette>>("/shaders/silhouette.frag", self.0).unwrap();
+        for (transform, sprite, directional_opt, blink_opt) in
+            (&transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join()
+        {
+            let _lock = if blink_opt.is_some() {
+                Some(graphics::use_shader(self.0, &blink_sh))
+            } else {
+                None
+            };
+
+            //  = graphics::use_shader();
             match &sprite.asset {
                 SpriteAsset::Single { value } => {
                     render_sprite(self.0, &value, &transform.pos, &transform.rotation, &sprite.size);

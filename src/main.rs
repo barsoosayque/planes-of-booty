@@ -8,26 +8,22 @@ use log::info;
 #[macro_use]
 mod math;
 
-mod attack;
 mod assets;
+mod attack;
 mod ecs;
 mod entity;
 mod game;
 mod item;
-mod ui;
 mod map;
+mod shader;
+mod ui;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};
     let colors = ColoredLevelConfig::default().info(Color::Blue).debug(Color::Green).trace(Color::Magenta);
     fern::Dispatch::new()
         .format(move |out, message, record| {
-            out.finish(format_args!(
-                "[{:<5}][{}] {}",
-                colors.color(record.level()),
-                record.target(),
-                message
-            ))
+            out.finish(format_args!("[{:<5}][{}] {}", colors.color(record.level()), record.target(), message))
         })
         // Filter out unnecessary stuff
         .level(log::LevelFilter::Trace)

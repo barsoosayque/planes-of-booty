@@ -237,12 +237,18 @@ pub struct Sprite {
 }
 pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct SpriteBlink {
+    pub frames_left: u8
+}
+
 ///////////////////////
 // Entity properties //
 ///////////////////////
 
 #[derive(Debug, Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct HealthPool {
     pub max_hp: u32,
     pub hp: u32,

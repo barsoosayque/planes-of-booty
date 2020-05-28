@@ -30,6 +30,7 @@ impl Game {
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
             .with(CameraSystem, "camera_system", &[])
+            .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
             .with(WatchDeadSystem, "watch_dead_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &[])
@@ -58,6 +59,7 @@ impl Game {
         world.register::<Movement>();
         world.register::<Transform>();
         world.register::<Sprite>();
+        world.register::<SpriteBlink>();
         world.register::<Target>();
         world.register::<SearchForTarget>();
         world.register::<FollowTarget>();
