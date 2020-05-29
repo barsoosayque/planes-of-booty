@@ -49,7 +49,8 @@ pub trait AttackPattern: Sync + Send {
 }
 
 pub trait ProjectileBehaviour: Sync + Send {
-    fn on_end(&self, data: &mut ProjectileData);
+    fn on_end(&self, _data: &mut ProjectileData) {}
+    fn on_hit(&self, _data: &mut ProjectileData) -> bool { true }
 }
 
 fn exclude_shooter(shooter: Option<&FactionId>) -> Vec<CollisionGroup> {
@@ -92,6 +93,34 @@ impl AttackPattern for Slingshot {
             behaviour: None,
         };
         data.projectiles.build(def);
+    }
+}
+
+pub struct Railgun;
+impl Railgun {
+    const DISTANCE: f32 = 1000.0;
+    const PROJECTILE_VELOCITY_FLAT: f32 = 1000.0;
+}
+impl AttackPattern for Railgun {
+    fn description(&self) -> &str { "Penetration at extreme speed." }
+
+    fn attack(&self, data: &mut AttackPatternData) {
+        let def = ProjectileDef {
+            asset: "/sprites/projectile/simple.png".to_owned(),
+            damage: data.prop.damage,
+            velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
+            distance: Self::DISTANCE,
+            pos: data.shooting_at,
+            size: Size2f::new(8.0, 8.0),
+            ignore_groups: exclude_shooter(data.shooter_faction),
+            behaviour: Some(Box::new(Self)),
+        };
+        data.projectiles.build(def);
+    }
+}
+impl ProjectileBehaviour for Railgun {
+    fn on_hit<'a>(&self, _: &mut ProjectileData<'a>) -> bool {
+        false
     }
 }
 

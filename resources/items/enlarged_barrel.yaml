@@ -1,0 +1,19 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/item/enlarged-barrel.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Enlarged Barrel"
+        description: "Professionals have standards."
+    Quality:
+        rarity: { rarity: "legendary" }
+    WeaponAttack:
+        pattern: { attack_pattern: "railgun" }
+    WeaponProperties:
+        accuracy: 1.0
+        damage: 40 
+        clip_size: 3 
+        reloading_time: 3.0
+        cooldown_time: 1.0
+        __default: true

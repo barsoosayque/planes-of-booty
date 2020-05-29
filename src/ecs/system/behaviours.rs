@@ -71,6 +71,25 @@ impl<'a> System<'a> for WeaponrySystem {
     }
 }
 pub struct ProjectileSystem;
+impl ProjectileSystem {
+    fn comps_to_data<'a>(
+        projectile: &'a Projectile,
+        distance: &'a DistanceCounter,
+        transform: &'a Transform,
+        spawn_queue: &'a mut SpawnQueue,
+    ) -> ProjectileData<'a> {
+        ProjectileData {
+            asset: &projectile.def.asset,
+            damage: projectile.def.damage,
+            velocity: &projectile.def.velocity,
+            distance_traveled: distance.distance,
+            pos: &transform.pos,
+            size: &projectile.def.size,
+            ignore_groups: &projectile.def.ignore_groups,
+            projectiles: spawn_queue,
+        }
+    }
+}
 impl<'a> System<'a> for ProjectileSystem {
     type SystemData = (
         WriteExpect<'a, SpawnQueue>,
@@ -95,33 +114,39 @@ impl<'a> System<'a> for ProjectileSystem {
                     physic_world.entity_for_collider(&proximity.collider2).unwrap(),
                 );
 
-                let (mut hpool, ddealer, dealer_e) =
-                    if let (Some(hpool), Some(ddealer)) = (hpools.get_mut(*entity1), ddealers.get(*entity2)) {
-                        (hpool, ddealer, entity2)
-                    } else if let (Some(hpool), Some(ddealer)) = (hpools.get_mut(*entity2), ddealers.get(*entity1)) {
-                        (hpool, ddealer, entity1)
-                    } else {
-                        continue;
-                    };
+                let (mut hpool, ddealer, projectile, dealer_e) = if let (Some(hpool), Some(ddealer), Some(projectile)) =
+                    (hpools.get_mut(*entity1), ddealers.get(*entity2), projectiles.get(*entity2))
+                {
+                    (hpool, ddealer, projectile, entity2)
+                } else if let (Some(hpool), Some(ddealer), Some(projectile)) =
+                    (hpools.get_mut(*entity2), ddealers.get(*entity1), projectiles.get(*entity1))
+                {
+                    (hpool, ddealer, projectile, entity1)
+                } else {
+                    continue;
+                };
 
+                // TODO: generalize damaging as distinct system
                 hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
-                to_destruct.insert(*dealer_e, tag::PendingDestruction).unwrap();
+
+                let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
+                    (&projectile.def.behaviour, distances.get(*dealer_e), transforms.get(*dealer_e))
+                {
+                    let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
+                    behaviour.on_hit(&mut data)
+                } else {
+                    true
+                };
+                if consumed {
+                    to_destruct.insert(*dealer_e, tag::PendingDestruction).unwrap();
+                }
             }
         }
 
         for (distance, transform, projectile) in (&distances, &transforms, &projectiles).join() {
             if let Some(behaviour) = &projectile.def.behaviour {
                 if distance.distance >= projectile.def.distance {
-                    let mut data = ProjectileData {
-                        asset: &projectile.def.asset,
-                        damage: projectile.def.damage,
-                        velocity: &projectile.def.velocity,
-                        distance_traveled: distance.distance,
-                        pos: &transform.pos,
-                        size: &projectile.def.size,
-                        ignore_groups: &projectile.def.ignore_groups,
-                        projectiles: spawn_queue.deref_mut(),
-                    };
+                    let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
                     behaviour.on_end(&mut data);
                 }
             }
