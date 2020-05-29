@@ -93,6 +93,9 @@ macro_rules! item_tooltip {
             $ui.text(format!("* Clip size: {}", props.clip_size));
             $ui.text(format!("* Reloading time: {:.2}", props.reloading_time));
             $ui.text(format!("* Cooling speed: {:.2}", props.cooldown_time));
+            if props.passive_reloading {
+                $ui.text("* Can reload passively !");
+            }
             $ui.text(&ImString::new(attack.pattern.description()));
         }
         if let Some(quality) = $data.qualities.get($item) {

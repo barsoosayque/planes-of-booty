@@ -1,5 +1,5 @@
 use crate::{
-    ecs::component::{CollisionGroup, FactionId, WeaponProperties},
+    ecs::component::{CollisionGroup, FactionId, WeaponProperties, DamageReciever, DamageType},
     math::*,
 };
 use nphysics2d::{
@@ -17,13 +17,14 @@ pub struct AttackPatternData<'a> {
     pub shooting_at: Vec2f,
     pub shooter_faction: Option<&'a FactionId>,
     pub shooter_body: Option<&'a mut RigidBody<f32>>,
+    pub shooter_damage_reciever: Option<&'a mut DamageReciever>,
     pub prop: &'a mut WeaponProperties,
     pub projectiles: &'a mut dyn ProjectileBuilder,
 }
 
 pub struct ProjectileData<'a> {
     pub asset: &'a String,
-    pub damage: u32,
+    pub damage: (u32, DamageType),
     pub velocity: &'a Vec2f,
     pub distance_traveled: f32,
     pub pos: &'a Vec2f,
@@ -34,7 +35,7 @@ pub struct ProjectileData<'a> {
 
 pub struct ProjectileDef {
     pub asset: String,
-    pub damage: u32,
+    pub damage: (u32, DamageType),
     pub velocity: Vec2f,
     pub distance: f32,
     pub pos: Vec2f,
@@ -71,6 +72,26 @@ fn with_angle_offset(normal: Vec2f, angle: Angle2f) -> Vec2f {
     Vec2f::new(normal.x * c - normal.y * s, normal.x * s + normal.y * c)
 }
 
+pub struct Ram;
+impl Ram {
+    const POWER: f32 = 4000.0;
+}
+impl AttackPattern for Ram {
+    fn description(&self) -> &str {
+        "Throw yourself into the battle with full impact damage negotiation."
+    }
+
+    fn attack(&self, data: &mut AttackPatternData) {
+        if let Some(body) = &mut data.shooter_body {
+            let throw = data.prop.shooting_normal * Self::POWER;
+            body.apply_force(0, &Force::linear([throw.x, throw.y].into()), ForceType::VelocityChange, true);
+        }
+        if let Some(dmg_rec) = &mut data.shooter_damage_reciever {
+            dmg_rec.damage_immunity[DamageType::Impact].replace(0.8);
+        }
+    }
+}
+
 pub struct Slingshot;
 impl Slingshot {
     const DISTANCE: f32 = 400.0;
@@ -84,7 +105,7 @@ impl AttackPattern for Slingshot {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -107,7 +128,7 @@ impl AttackPattern for Railgun {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -135,7 +156,7 @@ impl AttackPattern for Crossbow {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/bolt.png".to_owned(),
-            damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -163,7 +184,7 @@ impl AttackPattern for Cannon {
         }
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -195,7 +216,7 @@ impl AttackPattern for Shotgun {
             let pellet_normal = with_angle_offset(corrected, angle_offset);
             let def = ProjectileDef {
                 asset: "/sprites/projectile/simple.png".to_owned(),
-                damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
                 velocity: pellet_normal * Self::PROJECTILE_VELOCITY_FLAT,
                 distance: Self::DISTANCE,
                 pos: data.shooting_at,
@@ -222,7 +243,7 @@ impl AttackPattern for Split {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: data.prop.damage,
+            damage: (data.prop.damage, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE_FIRST,
             pos: data.shooting_at,

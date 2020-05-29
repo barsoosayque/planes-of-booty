@@ -20,6 +20,7 @@ log = "0.4.8"
 fern = { version = "0.6.0", features = ["colored"] }
 num-traits = "0.2.11"
 rand = "0.7.3"
+enum-map = "0.6.2"
 
 [patch.crates-io]
 # using imgui-rs with tooltip token patches

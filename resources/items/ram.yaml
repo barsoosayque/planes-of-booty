@@ -1,0 +1,20 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/item/ram.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Battering ram"
+        description: "Solid remedey against your enemies."
+    Quality:
+        rarity: { rarity: "rare" }
+    WeaponAttack:
+        pattern: { attack_pattern: "ram" }
+    WeaponProperties:
+        accuracy: 1.0
+        damage: 30 
+        clip_size: 2
+        reloading_time: 5.0
+        cooldown_time: 0.2
+        passive_reloading: true
+        __default: true

@@ -31,7 +31,6 @@ impl Game {
         let mut dispatcher = DispatcherBuilder::new()
             .with(CameraSystem, "camera_system", &[])
             .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
-            .with(WatchDeadSystem, "watch_dead_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &["search_for_target_system"])
             .with(ShootTargetSystem, "shoot_target_system", &["search_for_target_system"])
@@ -45,6 +44,8 @@ impl Game {
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
+            .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
+            .with(DamageSystem, "damage_system", &["projectile_system", "impact_damage_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(Camera::default());
@@ -77,6 +78,7 @@ impl Game {
         world.register::<Weaponry>();
         world.register::<HealthPool>();
         world.register::<DamageDealer>();
+        world.register::<DamageReciever>();
         world.register::<Projectile>();
         dispatcher.setup(&mut world);
 
@@ -169,7 +171,7 @@ impl EventHandler for Game {
                         .with(Transform { pos: def.pos, rotation: def.velocity.angle_from_x_axis() })
                         .with(DistanceLimited { limit: def.distance })
                         .with(DistanceCounter::default())
-                        .with(DamageDealer { damage: def.damage })
+                        .with(DamageDealer { damage: def.damage.0, damage_type: def.damage.1 })
                         .with(Physic {
                             body: body,
                             collide: (collider, CollideShapeHandle::Single { value: shape.clone() }),

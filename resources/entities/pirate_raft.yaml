@@ -33,7 +33,8 @@ components:
     Weaponry:
         primary: { item: "slingshot" }
         __default: true
-    Target: { __default: true }
-    Transform: { __default: true }
     Faction:
         id: { faction: "pirates" }
+    Target: { __default: true }
+    Transform: { __default: true }
+    DamageReciever: { __default: true }

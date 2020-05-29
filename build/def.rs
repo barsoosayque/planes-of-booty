@@ -120,6 +120,11 @@ impl PartValue {
                     "let collider = world.write_resource::<resource::PhysicWorld>()\
                     .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
                         .sensor({})\
+                        .material(\
+                            nphysics2d::material::MaterialHandle::new(\
+                                nphysics2d::material::BasicMaterial::new(0.5, 0.5)\
+                            )\
+                        )\
                         .collision_groups(\
                             nphysics2d::ncollide2d::pipeline::object::CollisionGroups::new()\
                             .with_membership(&[{}])\

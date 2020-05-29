@@ -7,6 +7,7 @@ use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
+use enum_map::{Enum, EnumMap};
 use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
 use std::{collections::HashSet as Set, fmt, sync::Arc};
 
@@ -144,6 +145,7 @@ pub struct WeaponProperties {
 
     pub damage: u32,
     pub accuracy: f32,
+    pub passive_reloading: bool
 }
 
 #[derive(Component)]
@@ -257,17 +259,32 @@ pub struct SpriteBlink {
 // Entity properties //
 ///////////////////////
 
-#[derive(Debug, Component)]
+#[derive(Default, Debug, Component)]
 #[storage(FlaggedStorage)]
 pub struct HealthPool {
     pub max_hp: u32,
     pub hp: u32,
 }
 
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct DamageReciever {
+    pub damage_queue: Vec<(u32, DamageType)>,
+    pub damage_immunity: EnumMap<DamageType, Option<f32>>
+}
+
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct DamageDealer {
     pub damage: u32,
+    pub damage_type: DamageType
+}
+#[derive(Debug, Clone, Copy, Enum)]
+pub enum DamageType {
+    Physical,
+    Impact,
+    Lightning,
+    Fire
 }
 
 #[derive(Component)]

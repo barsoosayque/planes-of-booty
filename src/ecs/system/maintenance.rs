@@ -39,7 +39,10 @@ impl<'a> System<'a> for InputsSystem {
         WriteStorage<'a, WeaponProperties>,
     );
 
-    fn run(&mut self, (mut movements, transforms, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData) {
+    fn run(
+        &mut self,
+        (mut movements, transforms, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData,
+    ) {
         for (movement, _) in (&mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
             if inputs.pressed_keys.contains(&KeyCode::W) {
@@ -69,11 +72,76 @@ impl<'a> System<'a> for InputsSystem {
     }
 }
 
-pub struct WatchDeadSystem;
-impl<'a> System<'a> for WatchDeadSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, HealthPool>, WriteStorage<'a, tag::PendingDestruction>);
+pub struct ImpactDamageSystem;
+impl ImpactDamageSystem {
+    const DAMAGE_MAX: f32 = 30.0;
+    const VELOCITY_MAX: f32 = 400.0;
+    const VELOCITY_MIN: f32 = 150.0;
 
-    fn run(&mut self, (entities, hpools, mut to_destruct): Self::SystemData) {
+    fn impact_factor(v1: &Vec2f, v2: &Vec2f) -> f32 {
+        ((Vec2f::new(v1.x - v2.x, v1.y - v2.y).length() - Self::VELOCITY_MIN).max(0.0) / Self::VELOCITY_MAX).min(1.0)
+    }
+}
+impl<'a> System<'a> for ImpactDamageSystem {
+    type SystemData = (ReadExpect<'a, PhysicWorld>, ReadStorage<'a, Movement>, WriteStorage<'a, DamageReciever>);
+
+    fn run(&mut self, (physic_world, movements, mut dmg_recievers): Self::SystemData) {
+        use nphysics2d::ncollide2d::pipeline::narrow_phase::ContactEvent;
+        for contact in physic_world.geometry_world.contact_events() {
+            if let ContactEvent::Started(handle1, handle2) = contact {
+                let (entity1, entity2) = (
+                    physic_world.entity_for_collider(&handle1).unwrap(),
+                    physic_world.entity_for_collider(&handle2).unwrap(),
+                );
+
+                let damage = Self::impact_factor(
+                    &movements.get(*entity1).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
+                    &movements.get(*entity2).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
+                ) * Self::DAMAGE_MAX;
+
+                if damage > 0.0 {
+                    let damage_pack = (damage.floor() as u32, DamageType::Impact);
+                    if let Some(rec) = dmg_recievers.get_mut(*entity1) {
+                        rec.damage_queue.push(damage_pack);
+                    }
+                    if let Some(rec) = dmg_recievers.get_mut(*entity2) {
+                        rec.damage_queue.push(damage_pack);
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub struct DamageSystem;
+impl<'a> System<'a> for DamageSystem {
+    type SystemData = (
+        Entities<'a>,
+        Read<'a, DeltaTime>,
+        WriteStorage<'a, HealthPool>,
+        WriteStorage<'a, DamageReciever>,
+        WriteStorage<'a, tag::PendingDestruction>,
+    );
+
+    fn run(&mut self, (entities, dt, mut hpools, mut dmg_recievers, mut to_destruct): Self::SystemData) {
+        for (mut hpool, dmg_rec) in (&mut hpools.restrict_mut(), &mut dmg_recievers).join() {
+            for (damage, damage_type) in dmg_rec.damage_queue.drain(..) {
+                if dmg_rec.damage_immunity[damage_type].is_none() {
+                    let hpool = hpool.get_mut_unchecked();
+                    hpool.hp = hpool.hp.saturating_sub(damage);
+                }
+            }
+
+            for (_, time_opt) in dmg_rec.damage_immunity.iter_mut() {
+                if let Some(mut time) = time_opt.take() {
+                    time -= dt.0.as_secs_f32();
+                    if time > 0.0 {
+                        time_opt.replace(time);
+                    }
+                }
+            }
+        }
+
         for (e, hpool) in (&entities, &hpools).join() {
             if hpool.hp <= 0 {
                 to_destruct.insert(e, tag::PendingDestruction).unwrap();
@@ -84,12 +152,8 @@ impl<'a> System<'a> for WatchDeadSystem {
 
 pub struct DestructionSystem;
 impl<'a> System<'a> for DestructionSystem {
-    type SystemData = (
-        Entities<'a>,
-        WriteExpect<'a, PhysicWorld>,
-        ReadStorage<'a, tag::PendingDestruction>,
-        ReadStorage<'a, Physic>,
-    );
+    type SystemData =
+        (Entities<'a>, WriteExpect<'a, PhysicWorld>, ReadStorage<'a, tag::PendingDestruction>, ReadStorage<'a, Physic>);
 
     fn run(&mut self, (entities, mut pworld, to_destruct, physics): Self::SystemData) {
         for (e, physics_opt, _) in (&entities, (&physics).maybe(), &to_destruct).join() {

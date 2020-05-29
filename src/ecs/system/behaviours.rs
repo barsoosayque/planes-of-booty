@@ -24,6 +24,7 @@ impl<'a> System<'a> for WeaponrySystem {
         ReadStorage<'a, Physic>,
         ReadStorage<'a, Faction>,
         ReadStorage<'a, Transform>,
+        WriteStorage<'a, DamageReciever>,
         WriteStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
         ReadStorage<'a, WeaponAttack>,
@@ -31,21 +32,41 @@ impl<'a> System<'a> for WeaponrySystem {
 
     fn run(
         &mut self,
-        (dt, mut spawn_queue, mut pworld, physics, factions, transforms, mut weaponries, mut props, attacks): Self::SystemData,
+        (
+            dt,
+            mut spawn_queue,
+            mut pworld,
+            physics,
+            factions,
+            transforms,
+            mut dmg_recievers,
+            mut weaponries,
+            mut props,
+            attacks,
+        ): Self::SystemData,
     ) {
-        for (transform, weaponry, faction_opt, physics_opt) in
-            (&transforms, &mut weaponries, (&factions).maybe(), (&physics).maybe()).join()
+        fn reload(prop: &mut WeaponProperties, dt: f32) {
+            if prop.clip == 0 {
+                prop.reloading += dt;
+                if prop.reloading >= prop.reloading_time {
+                    prop.reloading = 0.0;
+                    prop.cooldown = 0.0;
+                    prop.clip = prop.clip_size;
+                }
+            }
+        }
+
+        for (transform, weaponry, faction_opt, physics_opt, dmg_rec_opt) in
+            (&transforms, &mut weaponries, (&factions).maybe(), (&physics).maybe(), (&mut dmg_recievers).maybe()).join()
         {
+            if let Some(mut prop) = weaponry.secondary.and_then(|w| props.get_mut(w)) {
+                if prop.passive_reloading {
+                    reload(&mut prop, dt.0.as_secs_f32());
+                }
+            }
             if let Some((Some(mut prop), Some(attack))) = weaponry.primary.map(|w| (props.get_mut(w), attacks.get(w))) {
                 // handle reloading
-                if prop.clip == 0 {
-                    prop.reloading += dt.0.as_secs_f32();
-                    if prop.reloading >= prop.reloading_time {
-                        prop.reloading = 0.0;
-                        prop.cooldown = 0.0;
-                        prop.clip = prop.clip_size;
-                    }
-                }
+                reload(&mut prop, dt.0.as_secs_f32());
 
                 // shot if cooled
                 if prop.cooldown == 0.0 {
@@ -55,6 +76,7 @@ impl<'a> System<'a> for WeaponrySystem {
                             shooter_body: physics_opt
                                 .and_then(|p| pworld.bodies.get_mut(p.body))
                                 .and_then(|b| b.downcast_mut::<RigidBody<f32>>()),
+                            shooter_damage_reciever: dmg_rec_opt,
                             shooting_at: transform.pos,
                             prop: prop,
                             projectiles: spawn_queue.deref_mut(),
@@ -97,14 +119,23 @@ impl<'a> System<'a> for ProjectileSystem {
         ReadStorage<'a, DistanceCounter>,
         ReadStorage<'a, Projectile>,
         ReadStorage<'a, Transform>,
-        WriteStorage<'a, HealthPool>,
+        WriteStorage<'a, DamageReciever>,
         ReadStorage<'a, DamageDealer>,
         WriteStorage<'a, tag::PendingDestruction>,
     );
 
     fn run(
         &mut self,
-        (mut spawn_queue, physic_world, distances, projectiles, transforms, mut hpools, ddealers, mut to_destruct): Self::SystemData,
+        (
+            mut spawn_queue,
+            physic_world,
+            distances,
+            projectiles,
+            transforms,
+            mut dmg_recievers,
+            dmg_dealers,
+            mut to_destruct,
+        ): Self::SystemData,
     ) {
         use nphysics2d::ncollide2d::query::Proximity;
         for proximity in physic_world.geometry_world.proximity_events() {
@@ -114,23 +145,21 @@ impl<'a> System<'a> for ProjectileSystem {
                     physic_world.entity_for_collider(&proximity.collider2).unwrap(),
                 );
 
-                let (mut hpool, ddealer, projectile, dealer_e) = if let (Some(hpool), Some(ddealer), Some(projectile)) =
-                    (hpools.get_mut(*entity1), ddealers.get(*entity2), projectiles.get(*entity2))
+                let (dmg_rec, dmg_deal, projectile, deal_e) = if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                    (dmg_recievers.get_mut(*entity1), dmg_dealers.get(*entity2), projectiles.get(*entity2))
                 {
-                    (hpool, ddealer, projectile, entity2)
-                } else if let (Some(hpool), Some(ddealer), Some(projectile)) =
-                    (hpools.get_mut(*entity2), ddealers.get(*entity1), projectiles.get(*entity1))
+                    (dmg_rec, dmg_deal, projectile, entity2)
+                } else if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                    (dmg_recievers.get_mut(*entity2), dmg_dealers.get(*entity1), projectiles.get(*entity1))
                 {
-                    (hpool, ddealer, projectile, entity1)
+                    (dmg_rec, dmg_deal, projectile, entity1)
                 } else {
                     continue;
                 };
 
-                // TODO: generalize damaging as distinct system
-                hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
-
+                dmg_rec.damage_queue.push((dmg_deal.damage, dmg_deal.damage_type));
                 let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
-                    (&projectile.def.behaviour, distances.get(*dealer_e), transforms.get(*dealer_e))
+                    (&projectile.def.behaviour, distances.get(*deal_e), transforms.get(*deal_e))
                 {
                     let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
                     behaviour.on_hit(&mut data)
@@ -138,7 +167,7 @@ impl<'a> System<'a> for ProjectileSystem {
                     true
                 };
                 if consumed {
-                    to_destruct.insert(*dealer_e, tag::PendingDestruction).unwrap();
+                    to_destruct.insert(*deal_e, tag::PendingDestruction).unwrap();
                 }
             }
         }
@@ -164,12 +193,10 @@ impl<'a> System<'a> for PhysicSystem {
         for (e, body) in world.bodies_iter_mut() {
             if let Some(movement) = movements.get_mut(e) {
                 let velocity_len = movement.velocity.length();
+                body.set_linear_damping((velocity_len / movement.max_velocity).max(1.0));
+                //
                 // velocity soft-cap
-                if velocity_len > movement.max_velocity {
-                    body.set_linear_damping(0.9);
-                } else {
-                    body.set_linear_damping(0.98);
-
+                if velocity_len < movement.max_velocity {
                     let acceleration = movement.target_acceleration_normal * movement.acceleration_flat;
                     let force = Force::linear([acceleration.x, acceleration.y].into());
                     body.apply_force(0, &force, ForceType::AccelerationChange, true);
