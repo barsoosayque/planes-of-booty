@@ -1,6 +1,9 @@
-use crate::read_modified;
 use super::super::{component::*, resource::*, tag};
-use crate::{attack::AttackPatternData, math::*};
+use crate::{
+    attack::{AttackPatternData, ProjectileData},
+    math::*,
+    read_modified,
+};
 use nphysics2d::{
     algebra::ForceType,
     math::{Force, Isometry},
@@ -39,13 +42,14 @@ impl<'a> System<'a> for WeaponrySystem {
                     prop.reloading += dt.0.as_secs_f32();
                     if prop.reloading >= prop.reloading_time {
                         prop.reloading = 0.0;
+                        prop.cooldown = 0.0;
                         prop.clip = prop.clip_size;
                     }
                 }
 
                 // shot if cooled
-                if prop.is_shooting && prop.clip > 0 {
-                    if prop.cooldown == 0.0 {
+                if prop.cooldown == 0.0 {
+                    if prop.is_shooting && prop.clip > 0 {
                         let mut data = AttackPatternData {
                             shooter_faction: faction_opt.map(|f| &f.id),
                             shooter_body: physics_opt
@@ -58,9 +62,9 @@ impl<'a> System<'a> for WeaponrySystem {
                         attack.pattern.attack(&mut data);
                         prop.cooldown = prop.cooldown_time;
                         prop.clip -= 1;
-                    } else {
-                        prop.cooldown = (prop.cooldown - dt.0.as_secs_f32()).max(0.0);
                     }
+                } else {
+                    prop.cooldown = (prop.cooldown - dt.0.as_secs_f32()).max(0.0);
                 }
             }
         }
@@ -69,13 +73,20 @@ impl<'a> System<'a> for WeaponrySystem {
 pub struct ProjectileSystem;
 impl<'a> System<'a> for ProjectileSystem {
     type SystemData = (
+        WriteExpect<'a, SpawnQueue>,
         ReadExpect<'a, PhysicWorld>,
+        ReadStorage<'a, DistanceCounter>,
+        ReadStorage<'a, Projectile>,
+        ReadStorage<'a, Transform>,
         WriteStorage<'a, HealthPool>,
         ReadStorage<'a, DamageDealer>,
         WriteStorage<'a, tag::PendingDestruction>,
     );
 
-    fn run(&mut self, (physic_world, mut hpools, ddealers, mut to_destruct): Self::SystemData) {
+    fn run(
+        &mut self,
+        (mut spawn_queue, physic_world, distances, projectiles, transforms, mut hpools, ddealers, mut to_destruct): Self::SystemData,
+    ) {
         use nphysics2d::ncollide2d::query::Proximity;
         for proximity in physic_world.geometry_world.proximity_events() {
             if proximity.new_status == Proximity::Intersecting {
@@ -95,6 +106,24 @@ impl<'a> System<'a> for ProjectileSystem {
 
                 hpool.hp = hpool.hp.saturating_sub(ddealer.damage);
                 to_destruct.insert(*dealer_e, tag::PendingDestruction).unwrap();
+            }
+        }
+
+        for (distance, transform, projectile) in (&distances, &transforms, &projectiles).join() {
+            if let Some(behaviour) = &projectile.def.behaviour {
+                if distance.distance >= projectile.def.distance {
+                    let mut data = ProjectileData {
+                        asset: &projectile.def.asset,
+                        damage: projectile.def.damage,
+                        velocity: &projectile.def.velocity,
+                        distance_traveled: distance.distance,
+                        pos: &transform.pos,
+                        size: &projectile.def.size,
+                        ignore_groups: &projectile.def.ignore_groups,
+                        projectiles: spawn_queue.deref_mut(),
+                    };
+                    behaviour.on_end(&mut data);
+                }
             }
         }
     }
@@ -201,7 +230,8 @@ impl<'a> System<'a> for ShootTargetSystem {
 
     fn run(&mut self, (mut wpn_props, weaponry, targets, shoot_targets, transforms): Self::SystemData) {
         for (transform, weaponry, target, shoot_target) in (&transforms, &weaponry, &targets, &shoot_targets).join() {
-            if let (Some(target), Some(wpn_prop)) = (target.target, weaponry.primary.and_then(|w| wpn_props.get_mut(w))) {
+            if let (Some(target), Some(wpn_prop)) = (target.target, weaponry.primary.and_then(|w| wpn_props.get_mut(w)))
+            {
                 let target_transform = transforms.get(target).unwrap();
                 let area = Circle2f::new(transform.pos.to_point(), shoot_target.radius);
                 if area.contains(target_transform.pos.to_point()) {
@@ -227,7 +257,9 @@ impl<'a> System<'a> for SearchForTargetSystem {
 
     fn run(&mut self, (entities, mut targets, searches, factions, transforms): Self::SystemData) {
         for (e_target, transform, faction) in (&entities, &transforms, &factions).join() {
-            for (e, mut target, search, search_transform) in (&entities, &mut targets.restrict_mut(), &searches, &transforms).join() {
+            for (e, mut target, search, search_transform) in
+                (&entities, &mut targets.restrict_mut(), &searches, &transforms).join()
+            {
                 if target.get_unchecked().target.is_some() {
                     continue;
                 }
@@ -301,12 +333,17 @@ impl<'a> System<'a> for DistanceCounterSystem {
 
 pub struct DistanceLimitingSystem;
 impl<'a> System<'a> for DistanceLimitingSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, DistanceCounter>, ReadStorage<'a, DistanceLimited>);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, DistanceCounter>,
+        ReadStorage<'a, DistanceLimited>,
+        WriteStorage<'a, tag::PendingDestruction>,
+    );
 
-    fn run(&mut self, (entities, counters, limits): Self::SystemData) {
+    fn run(&mut self, (entities, counters, limits, mut to_destruct): Self::SystemData) {
         for (e, counter, limit) in (&entities, &counters, &limits).join() {
             if counter.distance >= limit.limit {
-                entities.delete(e).unwrap();
+                to_destruct.insert(e, tag::PendingDestruction).unwrap();
             }
         }
     }

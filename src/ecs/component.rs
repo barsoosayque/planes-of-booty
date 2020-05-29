@@ -1,4 +1,8 @@
-use crate::{assets::*, attack::AttackPattern, math::*};
+use crate::{
+    assets::*,
+    attack::{AttackPattern, ProjectileDef},
+    math::*,
+};
 use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
@@ -246,7 +250,7 @@ pub type SpriteAsset = DirOrSingle<Arc<ImageAsset>>;
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct SpriteBlink {
-    pub frames_left: u8
+    pub frames_left: u8,
 }
 
 ///////////////////////
@@ -264,6 +268,12 @@ pub struct HealthPool {
 #[storage(VecStorage)]
 pub struct DamageDealer {
     pub damage: u32,
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct Projectile {
+    pub def: ProjectileDef,
 }
 
 /////////////

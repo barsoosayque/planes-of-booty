@@ -168,7 +168,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct SpawnQueue(pub Queue<SpawnItem>);
 
 impl ProjectileBuilder for SpawnQueue {
@@ -177,7 +177,6 @@ impl ProjectileBuilder for SpawnQueue {
     }
 }
 
-#[derive(Debug)]
 pub enum SpawnItem {
     Entity(String, Point2f),
     Item(String, u32, Entity),

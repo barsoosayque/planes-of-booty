@@ -1,0 +1,19 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/item/surprise.png" }
+        size: { width: 50.0, height: 50.0 }
+    Named:
+        name: "Surprise"
+        description: "Lots of unexpected violence."
+    Quality:
+        rarity: { rarity: "legendary" }
+    WeaponAttack:
+        pattern: { attack_pattern: "split" }
+    WeaponProperties:
+        accuracy: 0.9
+        damage: 22 
+        clip_size: 4
+        reloading_time: 2.0
+        cooldown_time: 0.7
+        __default: true

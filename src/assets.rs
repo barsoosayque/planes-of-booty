@@ -1,8 +1,8 @@
+use crate::shader::ShaderInName;
+use gfx::{memory::Pod, pso::buffer::Structure, shade::ConstFormat};
 use ggez::graphics::{FilterMode, Image, Shader, WrapMode};
-use gfx::{memory::Pod, shade::ConstFormat, pso::buffer::Structure};
 use log::debug;
 use std::{any::Any, cell::UnsafeCell, collections::BTreeMap, sync::Arc};
-use crate::shader::ShaderInName;
 
 #[derive(Default)]
 pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>, u32);
@@ -17,6 +17,13 @@ impl AssetManager {
             self.0.insert(key.to_owned(), asset.clone());
             Ok(asset)
         }
+    }
+
+    pub fn key_for<A: Asset + 'static>(&self, asset: &A) -> Option<&String> {
+        self.0
+            .iter()
+            .find(|(_, a)| if let Some(a) = a.downcast_ref::<A>() { a.id() == asset.id() } else { false })
+            .map(|(key, _)| key)
     }
 }
 
@@ -82,10 +89,12 @@ impl<C: Copy + Clone + Pod + Structure<ConstFormat>> std::ops::Deref for ShaderA
     fn deref(&self) -> &Self::Target { &self.1 }
 }
 impl<C: Copy + Clone + Pod + Structure<ConstFormat>> AsRef<Shader<C>> for ShaderAsset<C> {
-     fn as_ref(&self) -> &Shader<C> { &self.1 }
+    fn as_ref(&self) -> &Shader<C> { &self.1 }
 }
 
-impl<C: 'static + Default + ShaderInName + Sync + Send + Copy + Clone + Pod + Structure<ConstFormat>> Asset for ShaderAsset<C> {
+impl<C: 'static + Default + ShaderInName + Sync + Send + Copy + Clone + Pod + Structure<ConstFormat>> Asset
+    for ShaderAsset<C>
+{
     type Context = ggez::Context;
 
     fn load(key: &str, id: u32, ctx: &mut Self::Context) -> anyhow::Result<Self> {

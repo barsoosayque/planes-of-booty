@@ -31,7 +31,7 @@ pub enum PartValue {
     Faction(String),
     CollisionGroup(String),
     Rarity(String),
-    AttackPattern(String),
+    AttackPattern(String, Map<String, PartValue>),
     Item(String),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
     Single { value: Box<PartValue> },
@@ -60,7 +60,18 @@ impl std::fmt::Display for PartValue {
                 write!(f, "(component::CollisionGroup::{} as usize)", group.to_camel_case())
             },
             PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
-            PartValue::AttackPattern(pattern) => write!(f, "Box::new(crate::attack::{})", pattern.to_camel_case()),
+            PartValue::AttackPattern(pattern, fields) => {
+                if fields.is_empty() {
+                    write!(f, "Box::new(crate::attack::{})", pattern.to_camel_case())
+                } else {
+                    write!(
+                        f,
+                        "Box::new(crate::attack::{}{{{}}})",
+                        pattern.to_camel_case(),
+                        fields.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<String>>().join(",")
+                    )
+                }
+            },
             PartValue::Directional { north, east, south, west } => write!(
                 f,
                 "component::DirOrSingle::Directional{{north:{},east:{},south:{},west:{}}}",
@@ -103,7 +114,8 @@ impl PartValue {
                     _ => panic!("No valid shapes defined to create a collide"),
                 };
 
-                let collision_membership_str = collision_membership.iter().map(|v| format!("{}", v)).collect::<Vec<String>>().join(",");
+                let collision_membership_str =
+                    collision_membership.iter().map(|v| format!("{}", v)).collect::<Vec<String>>().join(",");
                 Some(format!(
                     "let collider = world.write_resource::<resource::PhysicWorld>()\
                     .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
@@ -217,7 +229,6 @@ impl<'de> Visitor<'de> for PartValueVisitor {
                 ("faction", PartValue::Str(value)) => return Ok(PartValue::Faction(value)),
                 ("rarity", PartValue::Str(value)) => return Ok(PartValue::Rarity(value)),
                 ("item", PartValue::Str(value)) => return Ok(PartValue::Item(value)),
-                ("attack_pattern", PartValue::Str(value)) => return Ok(PartValue::AttackPattern(value)),
                 (key, value) => {
                     buffer.insert(key.to_owned(), value);
                 },
@@ -261,6 +272,8 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             (buffer.remove("sensor"), buffer.remove("shape"), buffer.remove("collision_membership"))
         {
             Ok(PartValue::Collide { sensor, collision_membership, shape: Box::new(shape) })
+        } else if let Some(PartValue::Str(pattern)) = buffer.remove("attack_pattern") {
+            Ok(PartValue::AttackPattern(pattern, buffer))
         } else {
             Err(de::Error::custom(format!("No special fields defined. Here is buffer: {:?}", buffer)))
         }

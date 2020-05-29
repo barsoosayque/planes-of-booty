@@ -9,7 +9,9 @@ components:
     Quality:
         rarity: { rarity: "common" }
     WeaponAttack:
-        pattern: { attack_pattern: "shotgun" }
+        pattern: 
+            attack_pattern: "shotgun"
+            pellets: 8
     WeaponProperties:
         accuracy: 0.95
         damage: 4

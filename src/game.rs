@@ -32,7 +32,6 @@ impl Game {
             .with(CameraSystem, "camera_system", &[])
             .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
             .with(WatchDeadSystem, "watch_dead_system", &[])
-            .with(DestructionSystem, "destruction_system", &["watch_dead_system"])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &["search_for_target_system"])
             .with(ShootTargetSystem, "shoot_target_system", &["search_for_target_system"])
@@ -78,6 +77,7 @@ impl Game {
         world.register::<Weaponry>();
         world.register::<HealthPool>();
         world.register::<DamageDealer>();
+        world.register::<Projectile>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
@@ -114,6 +114,8 @@ impl EventHandler for Game {
         // consume input events
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
         self.dispatcher.dispatch(&self.world);
+        // Force destruction system to run the last
+        DestructionSystem.run_now(&self.world);
 
         // Systems can spawn new stuff using SpawnQueue resource
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
@@ -153,7 +155,7 @@ impl EventHandler for Game {
                                 CollisionGroups::new()
                                     .with_membership(&[CollisionGroup::Projectiles as usize])
                                     .with_blacklist(
-                                        &def.ignore_groups.into_iter().map(|g| g as usize).collect::<Vec<usize>>(),
+                                        &def.ignore_groups.iter().cloned().map(|g| g as usize).collect::<Vec<usize>>(),
                                     ),
                             )
                             .build(BodyPartHandle(body, 0)),
@@ -173,6 +175,7 @@ impl EventHandler for Game {
                             asset: SpriteAsset::Single { value: assets.get::<ImageAsset>(&def.asset, ctx).unwrap() },
                             size: def.size,
                         })
+                        .with(Projectile { def: def })
                         .build();
                     phys_world.bodies.rigid_body_mut(body).unwrap().set_user_data(Some(Box::new(entity)));
                     phys_world.colliders.get_mut(collider).unwrap().set_user_data(Some(Box::new(entity)));

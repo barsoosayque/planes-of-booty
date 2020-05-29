@@ -56,6 +56,8 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                         ui.text(format!("Clip:\n{} / {}", prop.clip, prop.clip_size));
                         if prop.reloading > 0.0 {
                             ui.text("> Reload");
+                        } else if prop.cooldown > 0.0 {
+                            ui.text(format!("> {:.0}%", (1.0 - prop.cooldown / prop.cooldown_time) * 100.0));
                         } else {
                             ui.text("> Ready");
                         }
