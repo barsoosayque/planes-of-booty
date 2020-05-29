@@ -35,11 +35,11 @@ impl<'a> System<'a> for InputsSystem {
         Read<'a, Inputs>,
         Read<'a, Camera>,
         ReadStorage<'a, tag::Player>,
-        ReadStorage<'a, Weaponry>,
+        WriteStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
     );
 
-    fn run(&mut self, (mut movements, transforms, inputs, camera, tag, weaponries, mut wpn_props): Self::SystemData) {
+    fn run(&mut self, (mut movements, transforms, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData) {
         for (movement, _) in (&mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
             if inputs.pressed_keys.contains(&KeyCode::W) {
@@ -56,10 +56,14 @@ impl<'a> System<'a> for InputsSystem {
             };
             movement.target_acceleration_normal = direction.try_normalize().unwrap_or_default();
         }
-        for (transform, weaponry, _) in (&transforms, &weaponries, &tag).join() {
+        for (transform, weaponry, _) in (&transforms, &mut weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
                 props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
                 props.shooting_normal = (camera.project(&inputs.mouse_pos).to_vector() - transform.pos).normalize()
+            }
+
+            if inputs.mouse_scroll != 0.0 && weaponry.primary.is_some() && weaponry.secondary.is_some() {
+                std::mem::swap(&mut weaponry.primary, &mut weaponry.secondary);
             }
         }
     }

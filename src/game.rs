@@ -117,6 +117,9 @@ impl EventHandler for Game {
         // Force destruction system to run the last
         DestructionSystem.run_now(&self.world);
 
+        // reset inputs
+        self.world.write_resource::<Inputs>().mouse_scroll = 0.0;
+
         // Systems can spawn new stuff using SpawnQueue resource
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
             let mut assets = self.world.write_resource::<AssetManager>();
@@ -206,5 +209,9 @@ impl EventHandler for Game {
         self.world.write_resource::<Camera>().revert(ctx);
         UiRenderSystem(ctx, &mut self.imgui).run_now(&self.world);
         graphics::present(ctx)
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
+        self.world.write_resource::<Inputs>().mouse_scroll = y;
     }
 }

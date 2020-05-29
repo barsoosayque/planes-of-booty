@@ -117,6 +117,7 @@ pub struct Inputs {
     pub mouse_clicked: HashSet<input::mouse::MouseButton>,
     pub mouse_pressed: HashSet<input::mouse::MouseButton>,
     pub mouse_pos: Point2f,
+    pub mouse_scroll: f32,
 }
 
 #[derive(Default, Debug)]
