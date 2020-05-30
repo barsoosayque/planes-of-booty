@@ -441,6 +441,24 @@ impl<'a> System<'a> for DirectionalSystem {
     }
 }
 
+pub struct ExplodeOnDeathSystem;
+impl<'a> System<'a> for ExplodeOnDeathSystem {
+    type SystemData = (
+        WriteExpect<'a, SpawnQueue>,
+        ReadStorage<'a, Faction>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, tag::PendingDestruction>,
+    );
+
+    fn run(&mut self, (mut spawn_queue, faction, transform, to_destruct): Self::SystemData) {
+        for (faction, transform, _) in (&faction, &transform, &to_destruct).join() {
+            if faction.id == FactionId::Pirates {
+                spawn_queue.0.push_back(SpawnItem::Particle("explosion".to_owned(), transform.pos.to_point()));
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct DirectionalCollidersSystem {
     reader_id: Option<ReaderId<ComponentEvent>>,

@@ -48,6 +48,7 @@ impl Game {
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
             .with(DamageSystem, "damage_system", &["projectile_system", "impact_damage_system"])
+            .with(ExplodeOnDeathSystem, "explode_on_death_system", &["damage_system"])
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(Camera::default());
