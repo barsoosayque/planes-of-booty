@@ -34,9 +34,9 @@ components:
         acceleration_flat: 200.0
         steering_difficulty: 1.0
         __default: true
-    # SearchForTarget:
-    #     from_factions: [ { faction: "good" } ]
-    #     radius: 300.0
+    SearchForTarget:
+        from_factions: [ { faction: "good" } ]
+        radius: 300.0
     FollowTarget:
         keep_distance: 150.0
         follow_distance: 500.0

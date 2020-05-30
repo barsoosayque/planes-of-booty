@@ -72,6 +72,23 @@ fn with_angle_offset(normal: Vec2f, angle: Angle2f) -> Vec2f {
     Vec2f::new(normal.x * c - normal.y * s, normal.x * s + normal.y * c)
 }
 
+pub struct Hook;
+impl AttackPattern for Hook {
+    fn description(&self) -> &str {
+        "Shoot a pair of hooks which launches attached stuff towards together upon landing."
+    }
+
+    fn attack(&self, data: &mut AttackPatternData) {
+        // if let Some(body) = &mut data.shooter_body {
+        //     let throw = data.prop.shooting_normal * Self::POWER;
+        //     body.apply_force(0, &Force::linear([throw.x, throw.y].into()), ForceType::VelocityChange, true);
+        // }
+        // if let Some(dmg_rec) = &mut data.shooter_damage_reciever {
+        //     dmg_rec.damage_immunity[DamageType::Impact].replace(0.8);
+        // }
+    }
+}
+
 pub struct Ram;
 impl Ram {
     const POWER: f32 = 4000.0;

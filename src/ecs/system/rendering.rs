@@ -21,8 +21,8 @@ impl<'a> System<'a> for ParticleRenderSystem<'a> {
             let mut batch = graphics::spritebatch::SpriteBatch::new(asset.as_ref().as_ref().clone());
             for (transform, prop, def) in group {
                 let scale = Vec2f::new(
-                    def.size.width / asset.width() as f32,
-                    def.size.height / asset.height() as f32,
+                    (def.size.width * def.sheet_width as f32) / asset.width() as f32,
+                    (def.size.height * def.sheet_height as f32)/ asset.height() as f32,
                 );
 
                 let (frame_x, frame_y) = (prop.current_frame % def.sheet_width, prop.current_frame / def.sheet_width);

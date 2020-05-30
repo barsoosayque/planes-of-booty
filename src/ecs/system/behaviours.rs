@@ -22,7 +22,7 @@ impl<'a> System<'a> for ParticlesSystem {
         Read<'a, DeltaTime>,
         WriteStorage<'a, ParticleProperties>,
         ReadStorage<'a, SharedParticleDef>,
-        WriteStorage<'a, tag::PendingDestruction>
+        WriteStorage<'a, tag::PendingDestruction>,
     );
 
     fn run(&mut self, (entities, dt, mut properties, defs, mut to_destruct): Self::SystemData) {
@@ -197,10 +197,12 @@ impl<'a> System<'a> for ProjectileSystem {
         }
 
         for (distance, transform, projectile) in (&distances, &transforms, &projectiles).join() {
-            if let Some(behaviour) = &projectile.def.behaviour {
-                if distance.distance >= projectile.def.distance {
+            if distance.distance >= projectile.def.distance {
+                if let Some(behaviour) = &projectile.def.behaviour {
                     let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
                     behaviour.on_end(&mut data);
+                } else {
+                    spawn_queue.0.push_back(SpawnItem::Particle("splash".to_string(), transform.pos.to_point()));
                 }
             }
         }

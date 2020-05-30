@@ -1,0 +1,11 @@
+components:
+    ParticleProperties: { __default: true }
+    Transform: { __default: true }
+shared_components:
+    ParticleDef:
+        spritesheet: { image: "/sprites/particle/splash.png" }
+        sheet_width: 4
+        sheet_height: 4
+        time_per_frame: 0.1
+        frames: 14 
+        size: { width: 20.0, height: 30.0 }
