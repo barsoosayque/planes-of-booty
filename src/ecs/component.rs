@@ -8,6 +8,7 @@ use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
+use std::ops::RangeInclusive;
 use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
 use std::{collections::HashSet as Set, fmt, sync::Arc};
 
@@ -126,6 +127,16 @@ pub struct Stackable {
 }
 impl Default for Stackable {
     fn default() -> Self { Stackable { current: 1, stack_size: 1 } }
+}
+
+#[derive(Default, Component)]
+#[storage(FlaggedStorage)]
+pub struct RandomizedWeaponProperties {
+    pub clip_size: Option<RangeInclusive<u8>>,
+    pub reloading_time: Option<RangeInclusive<f32>>,
+    pub cooldown_time: Option<RangeInclusive<f32>>,
+    pub damage: Option<RangeInclusive<u32>>,
+    pub accuracy: Option<RangeInclusive<f32>>,
 }
 
 #[derive(Default, Component)]

@@ -10,10 +10,12 @@ components:
         rarity: { rarity: "common" }
     WeaponAttack:
         pattern: { attack_pattern: "slingshot" }
+    RandomizedWeaponProperties:
+        accuracy: { start: 0.88, end: 0.95 }
+        damage: { start: 7, end: 10 }
+        reloading_time: { start: 0.4, end: 0.6 }
+        __default: true
     WeaponProperties:
-        accuracy: 0.9
-        damage: 7
         clip_size: 1
-        reloading_time: 0.5
         cooldown_time: 0.0
         __default: true

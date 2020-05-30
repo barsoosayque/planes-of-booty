@@ -44,6 +44,7 @@ impl Game {
             .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
+            .with(RandomizedWeaponsSystem::default(), "randomized_weapons_system", &[])
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
@@ -76,6 +77,7 @@ impl Game {
         world.register::<Named>();
         world.register::<Quality>();
         world.register::<Stackable>();
+        world.register::<RandomizedWeaponProperties>();
         world.register::<WeaponProperties>();
         world.register::<WeaponAttack>();
         world.register::<Weaponry>();

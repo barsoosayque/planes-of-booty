@@ -2,7 +2,7 @@ use super::super::{component::*, resource::*, tag};
 use crate::{
     attack::{AttackPatternData, ProjectileData},
     math::*,
-    read_modified,
+    read_event,
 };
 use nphysics2d::{
     algebra::ForceType,
@@ -468,7 +468,7 @@ impl<'a> System<'a> for DirectionalCollidersSystem {
     type SystemData = (ReadStorage<'a, Directional>, WriteStorage<'a, Physic>, WriteExpect<'a, PhysicWorld>);
 
     fn run(&mut self, (directionals, mut physics, mut world): Self::SystemData) {
-        read_modified!(directionals => self.reader_id.as_mut().unwrap() => self.modified);
+        read_event!(Modified; directionals => self.reader_id.as_mut().unwrap() => self.modified);
 
         for (direction, physic, _) in (&directionals, &mut physics, &self.modified).join() {
             if let CollideShapeHandle::Directional { north, east, south, west } = &physic.collide.1 {
@@ -505,7 +505,7 @@ impl<'a> System<'a> for SpriteDamageBlinkSystem {
             blinks.remove(e);
         }
 
-        read_modified!(hpools => self.reader_id.as_mut().unwrap() => self.modified);
+        read_event!(Modified; hpools => self.reader_id.as_mut().unwrap() => self.modified);
 
         for (e, _) in (&entities, &self.modified).join() {
             blinks.insert(e, SpriteBlink { frames_left: 4 }).unwrap();

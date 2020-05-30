@@ -1,8 +1,10 @@
 use super::super::{component::*, resource::*, tag};
-use crate::{math::*, ui::system::ImGuiSystem};
+use crate::{math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use specs::prelude::*;
 use std::ops::DerefMut;
+use rand::{thread_rng, Rng};
+use rand::distributions::uniform::Uniform;
 
 pub struct CameraSystem;
 impl<'a> System<'a> for CameraSystem {
@@ -24,6 +26,42 @@ impl<'a> System<'a> for InventoryMaintenanceSystem {
         for inv in (&mut inventories).join() {
             inv.content.maintain();
         }
+    }
+}
+
+macro_rules! random_range {
+    ($rng:expr; $from:expr => $to:expr) => {
+        if let Some(range) = &$from {
+            $to = $rng.sample(Uniform::new_inclusive(range.start(), range.end()));
+        }
+    }
+}
+#[derive(Default)]
+pub struct RandomizedWeaponsSystem {
+    reader_id: Option<ReaderId<ComponentEvent>>,
+    inserted: BitSet,
+}
+impl<'a> System<'a> for RandomizedWeaponsSystem {
+    type SystemData = (WriteStorage<'a, RandomizedWeaponProperties>, WriteStorage<'a, WeaponProperties>);
+
+    fn run(&mut self, (mut randoms, mut props): Self::SystemData) {
+        read_event!(Inserted; randoms => self.reader_id.as_mut().unwrap() => self.inserted);
+
+        for (random, prop, _) in (&randoms, &mut props, &self.inserted).join() {
+            let mut rng = thread_rng();
+            random_range!(rng; random.clip_size => prop.clip_size);
+            random_range!(rng; random.reloading_time => prop.reloading_time);
+            random_range!(rng; random.cooldown_time => prop.cooldown_time);
+            random_range!(rng; random.damage => prop.damage);
+            random_range!(rng; random.accuracy => prop.accuracy);
+        }
+
+        randoms.clear();
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(world.write_storage::<RandomizedWeaponProperties>().register_reader());
     }
 }
 

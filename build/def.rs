@@ -35,6 +35,7 @@ pub enum PartValue {
     Rarity(String),
     AttackPattern(String, Map<String, PartValue>),
     Item(String),
+    Range(Box<PartValue>, Box<PartValue>),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
     Single { value: Box<PartValue> },
     Size { width: f32, height: f32 },
@@ -74,6 +75,7 @@ impl std::fmt::Display for PartValue {
                     )
                 }
             },
+            PartValue::Range(start, end) => write!(f, "({}..={}).into()", start, end),
             PartValue::Directional { north, east, south, west } => write!(
                 f,
                 "component::DirOrSingle::Directional{{north:{},east:{},south:{},west:{}}}",
@@ -279,6 +281,8 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             Ok(PartValue::Collide { sensor, collision_membership, shape: Box::new(shape) })
         } else if let Some(PartValue::Str(pattern)) = buffer.remove("attack_pattern") {
             Ok(PartValue::AttackPattern(pattern, buffer))
+        } else if let (Some(start), Some(end)) = (buffer.remove("start"), buffer.remove("end")) {
+            Ok(PartValue::Range(Box::new(start), Box::new(end)))
         } else {
             Err(de::Error::custom(format!("No special fields defined. Here is buffer: {:?}", buffer)))
         }

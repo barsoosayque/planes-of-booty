@@ -12,10 +12,12 @@ components:
         pattern: 
             attack_pattern: "shotgun"
             pellets: 8
+    RandomizedWeaponProperties:
+        accuracy: { start: 0.8, end: 1.0 }
+        damage: { start: 4, end: 6 }
+        reloading_time: { start: 1.8, end: 2.5 }
+        __default: true
     WeaponProperties:
-        accuracy: 0.95
-        damage: 4
         clip_size: 1
-        reloading_time: 3.0
         cooldown_time: 0.0
         __default: true

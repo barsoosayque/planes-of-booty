@@ -5,11 +5,16 @@ components:
         size: { width: 50.0, height: 50.0 }
     Named:
         name: "Battering ram"
-        description: "Solid remedey against your enemies."
+        description: "Rules of nature."
     Quality:
         rarity: { rarity: "rare" }
     WeaponAttack:
         pattern: { attack_pattern: "ram" }
+    RandomizedWeaponProperties:
+        clip_size: { start: 2, end: 3 }
+        cooldown_time: { start: 0.2, end: 0.5 }
+        reloading_time: { start: 4, end: 8 }
+        __default: true
     WeaponProperties:
         accuracy: 1.0
         damage: 30 

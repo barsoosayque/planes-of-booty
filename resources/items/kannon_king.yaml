@@ -10,10 +10,12 @@ components:
         rarity: { rarity: "rare" }
     WeaponAttack:
         pattern: { attack_pattern: "cannon" }
+    RandomizedWeaponProperties:
+        damage: { start: 20, end: 30 }
+        reloading_time: { start: 0.5, end: 1.0 }
+        __default: true
     WeaponProperties:
         accuracy: 1.0
-        damage: 30
         clip_size: 1
-        reloading_time: 0.5
         cooldown_time: 0.0
         __default: true

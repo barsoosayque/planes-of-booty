@@ -66,3 +66,18 @@ pub fn render_polygon(ctx: &mut ggez::Context, points: &[Point2f], color: u32) {
     let mesh = graphics::Mesh::new_polygon(ctx, mode, points, color).unwrap();
     ggez::graphics::draw(ctx, &mesh, graphics::DrawParam::default()).unwrap();
 }
+
+#[macro_export]
+macro_rules! read_event {
+    ($event:ident; $storage:expr => $reader:expr => $bitset:expr) => {
+        $bitset.clear();
+        for event in $storage.channel().read($reader) {
+            match event {
+                ComponentEvent::$event(id) => {
+                    $bitset.add(*id);
+                },
+                _ => (),
+            };
+        }
+    }
+}
