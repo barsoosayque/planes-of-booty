@@ -3,11 +3,11 @@ use crate::{
     attack::{AttackPattern, ProjectileDef},
     math::*,
 };
+use enum_map::{Enum, EnumMap};
 use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
-use enum_map::{Enum, EnumMap};
 use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
 use std::{collections::HashSet as Set, fmt, sync::Arc};
 
@@ -145,7 +145,7 @@ pub struct WeaponProperties {
 
     pub damage: u32,
     pub accuracy: f32,
-    pub passive_reloading: bool
+    pub passive_reloading: bool,
 }
 
 #[derive(Component)]
@@ -255,6 +255,33 @@ pub struct SpriteBlink {
     pub frames_left: u8,
 }
 
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct ParticleProperties {
+    pub current_frame: u16,
+    pub frame_time: f32,
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct SharedParticleDef(Arc<ParticleDef>);
+impl From<Arc<ParticleDef>> for SharedParticleDef {
+    fn from(arc: Arc<ParticleDef>) -> Self { Self(arc) }
+}
+impl std::ops::Deref for SharedParticleDef {
+    type Target = ParticleDef;
+    fn deref(&self) -> &Self::Target { self.0.as_ref() }
+}
+
+pub struct ParticleDef {
+    pub spritesheet: Arc<ImageAsset>,
+    pub sheet_width: u16,
+    pub sheet_height: u16,
+    pub time_per_frame: f32,
+    pub frames: u16,
+    pub size: Size2f,
+}
+
 ///////////////////////
 // Entity properties //
 ///////////////////////
@@ -270,21 +297,21 @@ pub struct HealthPool {
 #[storage(VecStorage)]
 pub struct DamageReciever {
     pub damage_queue: Vec<(u32, DamageType)>,
-    pub damage_immunity: EnumMap<DamageType, Option<f32>>
+    pub damage_immunity: EnumMap<DamageType, Option<f32>>,
 }
 
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct DamageDealer {
     pub damage: u32,
-    pub damage_type: DamageType
+    pub damage_type: DamageType,
 }
 #[derive(Debug, Clone, Copy, Enum)]
 pub enum DamageType {
     Physical,
     Impact,
     Lightning,
-    Fire
+    Fire,
 }
 
 #[derive(Component)]

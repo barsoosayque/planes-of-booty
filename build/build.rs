@@ -42,12 +42,19 @@ fn main() {
 
     let (items, items_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/items").unzip();
     fs::write(format!("{}/generated/item.rs", out_dir), codegen::generate_full_group(&items, "i")).unwrap();
-    println!("Total items generated: {}", entities.len());
+    println!("Total items generated: {}", items.len());
+
+    let (particles, particles_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/particles").unzip();
+    fs::write(format!("{}/generated/particle.rs", out_dir), codegen::generate_spawn_only(&particles, "p")).unwrap();
+    println!("Total particles generated: {}", particles.len());
 
     for path in entities_path {
         println!("cargo:rerun-if-changed={:?}", path);
     }
     for path in items_path {
+        println!("cargo:rerun-if-changed={:?}", path);
+    }
+    for path in particles_path {
         println!("cargo:rerun-if-changed={:?}", path);
     }
 }

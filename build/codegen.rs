@@ -1,5 +1,6 @@
-use crate::def::{EntityDef, PartValue};
+use crate::def::{ComponentDef, EntityDef, PartValue};
 use codegen::*;
+use heck::{SnakeCase, ShoutySnakeCase};
 use std::collections::BTreeSet as Set;
 
 pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> String {
@@ -7,6 +8,15 @@ pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> String {
     scope.raw(&generate_names_array(defs));
     scope.push_fn(generate_generic_spawn_fn(&defs));
     scope.push_fn(generate_generic_view_fn(&defs));
+    for def in defs {
+        scope.push_fn(generate_spawn_fn(&def, group_name));
+    }
+    scope.to_string()
+}
+
+pub fn generate_spawn_only(defs: &Vec<EntityDef>, group_name: &str) -> String {
+    let mut scope = Scope::new();
+    scope.push_fn(generate_generic_spawn_fn(&defs));
     for def in defs {
         scope.push_fn(generate_spawn_fn(&def, group_name));
     }
@@ -105,6 +115,26 @@ fn collect_init_and_fin(part: &PartValue, buffers: &mut (Set<String>, Set<String
     }
 }
 
+fn stringify_component(name: &str, contents: &ComponentDef) -> String {
+    if contents.default && contents.parts.len() == 0 {
+        format!("component::{}::default()", name)
+    } else {
+        let mut body = format!("component::{}{{", name);
+        body.push_str(
+            &contents
+                .parts
+                .iter()
+                .map(|(part_name, part_value)| format!("{}:{}", part_name, part_value))
+                .collect::<Vec<String>>()
+                .join(","),
+        );
+        if contents.default {
+            body.push_str(&format!(",..component::{}::default()", name));
+        }
+        body.push_str("}");
+        body
+    }
+}
 pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
     // collect unique initialize and finalize lines from sorted parts
     let mut buffers: (Set<String>, Set<String>) = (Set::new(), Set::new());
@@ -135,31 +165,30 @@ pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
         fn_gen.line(&line);
     }
 
+    for (name, contents) in &def.shared_components {
+        let contents = stringify_component(&name, &contents);
+        let shared_field = format!("SHARED_{}", name.to_shouty_snake_case());
+        fn_gen.line(format!("static mut {}: Option<std::sync::Arc<component::{}>> = None;", shared_field, name));
+        let lazy_init = format!(
+            "let shared_{} = unsafe{{match&{}{{
+                Some(arc) => arc.clone(),
+                None => {{{}.replace(std::sync::Arc::new({}));{}.as_ref().unwrap().clone()}}
+            }}}};",
+            name.to_snake_case(), shared_field, shared_field, contents, shared_field
+        );
+        fn_gen.line(lazy_init);
+    }
+
     fn_gen.line("let entity = world.create_entity_unchecked()");
     for tag in &def.tags {
         fn_gen.line(format!(".with(tag::{})", tag));
     }
     for (name, contents) in &def.components {
-        let component = if contents.default && contents.parts.len() == 0 {
-            format!("component::{}::default()", name)
-        } else {
-            let mut body = format!("component::{}{{", name);
-            body.push_str(
-                &contents
-                    .parts
-                    .iter()
-                    .map(|(part_name, part_value)| format!("{}:{}", part_name, part_value))
-                    .collect::<Vec<String>>()
-                    .join(","),
-            );
-            if contents.default {
-                body.push_str(&format!(",..component::{}::default()", name));
-            }
-            body.push_str("}");
-            body
-        };
-
-        fn_gen.line(format!(".with({})", component));
+        let contents = stringify_component(&name, &contents);
+        fn_gen.line(format!(".with({})", contents));
+    }
+    for (name, _) in &def.shared_components {
+        fn_gen.line(format!(".with(component::Shared{}::from(shared_{}))", name, name.to_snake_case()));
     }
     fn_gen.line(&format!(".with(component::Reflection{{id:\"{}_{}\"}})", reflection_prefix, def.name));
     fn_gen.line(".build();");

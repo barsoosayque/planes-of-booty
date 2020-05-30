@@ -4,7 +4,41 @@ use super::{
 };
 use crate::{assets::*, entity, math::*, shader, ui::ImGuiSystem};
 use ggez::{graphics, Context};
+use itertools::Itertools;
 use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
+
+pub struct ParticleRenderSystem<'a>(pub &'a mut Context);
+impl<'a> System<'a> for ParticleRenderSystem<'a> {
+    type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, ParticleProperties>, ReadStorage<'a, SharedParticleDef>);
+
+    fn run(&mut self, (transforms, props, defs): Self::SystemData) {
+        let groups = (&transforms, &props, &defs)
+            .join()
+            .into_iter()
+            .sorted_by_key(|(_, _, def)| def.spritesheet.id())
+            .group_by(|(_, _, def)| &def.spritesheet);
+        for (asset, group) in groups.into_iter() {
+            let mut batch = graphics::spritebatch::SpriteBatch::new(asset.as_ref().as_ref().clone());
+            for (transform, prop, def) in group {
+                let scale = Vec2f::new(
+                    def.size.width / asset.width() as f32,
+                    def.size.height / asset.height() as f32,
+                );
+
+                let (frame_x, frame_y) = (prop.current_frame % def.sheet_width, prop.current_frame / def.sheet_width);
+                let (frame_w, frame_h) = (1.0 / def.sheet_width as f32, 1.0 / def.sheet_height as f32);
+
+                let param = graphics::DrawParam::default()
+                    .scale(scale)
+                    .offset(Point2f::new(0.5, 0.5))
+                    .src([frame_x as f32 * frame_w, frame_y as f32 * frame_h, frame_w, frame_h].into())
+                    .dest(transform.pos.to_point());
+                batch.add(param);
+            }
+            graphics::draw(self.0, &batch, graphics::DrawParam::default()).unwrap();
+        }
+    }
+}
 
 pub struct UiRenderSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'a> System<'a> for UiRenderSystem<'_> {
@@ -43,11 +77,7 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         for (transform, sprite, directional_opt, blink_opt) in
             (&transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join()
         {
-            let _lock = if blink_opt.is_some() {
-                Some(graphics::use_shader(self.0, &blink_sh))
-            } else {
-                None
-            };
+            let _lock = if blink_opt.is_some() { Some(graphics::use_shader(self.0, &blink_sh)) } else { None };
 
             //  = graphics::use_shader();
             match &sprite.asset {

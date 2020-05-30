@@ -3,6 +3,7 @@ use crate::{
     ecs::{component::*, resource::*, system::*, tag},
     entity, item,
     math::*,
+    particle,
     ui::ImGuiSystem,
 };
 use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
@@ -30,6 +31,7 @@ impl Game {
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
             .with(CameraSystem, "camera_system", &[])
+            .with(ParticlesSystem, "particles_system", &[])
             .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
             .with(FollowTargetSystem, "follow_target_system", &["search_for_target_system"])
@@ -80,6 +82,8 @@ impl Game {
         world.register::<DamageDealer>();
         world.register::<DamageReciever>();
         world.register::<Projectile>();
+        world.register::<SharedParticleDef>();
+        world.register::<ParticleProperties>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
@@ -128,6 +132,12 @@ impl EventHandler for Game {
             match item {
                 SpawnItem::Entity(id, pos) => {
                     let e = entity::spawn(&id, &self.world, ctx, &mut assets);
+                    if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
+                        transform.pos = pos.to_vector();
+                    }
+                },
+                SpawnItem::Particle(id, pos) => {
+                    let e = particle::spawn(&id, &self.world, ctx, &mut assets);
                     if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
                         transform.pos = pos.to_vector();
                     }
@@ -204,6 +214,7 @@ impl EventHandler for Game {
         if settings.is_debug_targeting {
             DebugTargetRenderSystem(ctx).run_now(&self.world);
         }
+        ParticleRenderSystem(ctx).run_now(&self.world);
         SpriteRenderSystem(ctx).run_now(&self.world);
         if settings.is_debug_physic {
             DebugPhysicRenderSystem(ctx).run_now(&self.world);

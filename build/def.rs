@@ -12,6 +12,8 @@ pub struct EntityDef {
     pub name: String,
     pub components: Map<String, ComponentDef>,
     #[serde(default)]
+    pub shared_components: Map<String, ComponentDef>,
+    #[serde(default)]
     pub tags: Vec<String>,
 }
 
@@ -120,11 +122,9 @@ impl PartValue {
                     "let collider = world.write_resource::<resource::PhysicWorld>()\
                     .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
                         .sensor({})\
-                        .material(\
-                            nphysics2d::material::MaterialHandle::new(\
-                                nphysics2d::material::BasicMaterial::new(0.5, 0.5)\
-                            )\
-                        )\
+                        .material(nphysics2d::material::MaterialHandle::new(\
+                            nphysics2d::material::BasicMaterial::new(0.8, 0.8)\
+                        ))\
                         .collision_groups(\
                             nphysics2d::ncollide2d::pipeline::object::CollisionGroups::new()\
                             .with_membership(&[{}])\

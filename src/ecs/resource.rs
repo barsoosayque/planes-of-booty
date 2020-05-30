@@ -180,6 +180,7 @@ impl ProjectileBuilder for SpawnQueue {
 
 pub enum SpawnItem {
     Entity(String, Point2f),
+    Particle(String, Point2f),
     Item(String, u32, Entity),
     Projectile(ProjectileDef),
 }

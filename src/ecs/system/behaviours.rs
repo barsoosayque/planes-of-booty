@@ -15,6 +15,30 @@ use specs::{
 };
 use std::ops::DerefMut;
 
+pub struct ParticlesSystem;
+impl<'a> System<'a> for ParticlesSystem {
+    type SystemData = (
+        Entities<'a>,
+        Read<'a, DeltaTime>,
+        WriteStorage<'a, ParticleProperties>,
+        ReadStorage<'a, SharedParticleDef>,
+        WriteStorage<'a, tag::PendingDestruction>
+    );
+
+    fn run(&mut self, (entities, dt, mut properties, defs, mut to_destruct): Self::SystemData) {
+        for (e, prop, def) in (&entities, &mut properties, &defs).join() {
+            prop.frame_time += dt.0.as_secs_f32();
+            if prop.frame_time >= def.time_per_frame {
+                prop.current_frame += 1;
+            }
+
+            if prop.current_frame >= def.frames {
+                to_destruct.insert(e, tag::PendingDestruction).unwrap();
+            }
+        }
+    }
+}
+
 pub struct WeaponrySystem;
 impl<'a> System<'a> for WeaponrySystem {
     type SystemData = (
@@ -194,7 +218,7 @@ impl<'a> System<'a> for PhysicSystem {
             if let Some(movement) = movements.get_mut(e) {
                 let velocity_len = movement.velocity.length();
                 body.set_linear_damping((velocity_len / movement.max_velocity).max(1.0));
-                //
+
                 // velocity soft-cap
                 if velocity_len < movement.max_velocity {
                     let acceleration = movement.target_acceleration_normal * movement.acceleration_flat;

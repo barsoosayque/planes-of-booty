@@ -17,6 +17,7 @@ mod item;
 mod map;
 mod shader;
 mod ui;
+mod particle;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};

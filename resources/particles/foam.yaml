@@ -1,0 +1,11 @@
+components:
+    ParticleProperties: { __default: true }
+    Transform: { __default: true }
+shared_components:
+    ParticleDef:
+        spritesheet: { image: "/sprites/particle/foam.png" }
+        sheet_width: 3
+        sheet_height: 3
+        time_per_frame: 0.1
+        frames: 8
+        size: { width: 30.0, height: 30.0 }
