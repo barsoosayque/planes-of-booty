@@ -444,6 +444,27 @@ impl<'a> System<'a> for DirectionalSystem {
     }
 }
 
+pub struct ContainerSinkSystem;
+impl<'a> System<'a> for ContainerSinkSystem {
+    type SystemData = (
+        Entities<'a>,
+        WriteExpect<'a, SpawnQueue>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, Inventory>,
+        ReadStorage<'a, tag::Container>,
+        WriteStorage<'a, tag::PendingDestruction>,
+    );
+
+    fn run(&mut self, (entities, mut spawn_queue, transforms, inventories, containers, mut to_destruct): Self::SystemData) {
+        for (e, transform, inventory, _) in (&entities, &transforms, &inventories, &containers).join() {
+            if !inventory.content.have_some() {
+                to_destruct.insert(e, tag::PendingDestruction).unwrap();
+                spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::MediumSplash, transform.pos.to_point()));
+            }
+        }
+    }
+}
+
 pub struct ExplodeOnDeathSystem;
 impl<'a> System<'a> for ExplodeOnDeathSystem {
     type SystemData = (

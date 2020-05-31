@@ -5,3 +5,4 @@ components:
         size: { width: 30.0, height: 40.0 }
     Transform: { __default: true }
     Inventory: { __default: true }
+tags: ["Container"]

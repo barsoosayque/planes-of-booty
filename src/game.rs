@@ -45,6 +45,7 @@ impl Game {
             .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
+            .with(ContainerSinkSystem, "container_sink_system", &[])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(RandomizedWeaponsSystem::default(), "randomized_weapons_system", &[])
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])

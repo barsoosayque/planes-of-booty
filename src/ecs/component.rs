@@ -1,8 +1,8 @@
 use crate::{
     assets::*,
     attack::{AttackPattern, ProjectileDef},
+    item,
     math::*,
-    item
 };
 use enum_map::{Enum, EnumMap};
 use nphysics2d::{
@@ -91,6 +91,8 @@ impl Content {
     }
 
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
+
+    pub fn have_some(&self) -> bool { self.0.iter().any(|i| i.is_some()) }
 
     pub fn iter(&self) -> impl Iterator<Item = &ItemBox> { self.0.iter() }
 

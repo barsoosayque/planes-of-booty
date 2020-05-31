@@ -228,7 +228,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
                     });
                 }
             });
-            if !is_opened {
+            if !is_opened || (!data.inventories.contains(*e) && !data.weaponries.contains(*e)) {
                 for_deletion.insert(*e);
             }
         }
