@@ -1,3 +1,4 @@
+use crate::codegen::*;
 use def::*;
 use std::{
     fs,
@@ -32,20 +33,42 @@ fn read_defs_from<P: AsRef<Path>>(path: P) -> impl Iterator<Item = (EntityDef, P
     })
 }
 
+fn filter_by_rarity(def: &&EntityDef, rarity: &str) -> bool {
+    def.components.iter().any(|(name, contents)| {
+        name == "Quality"
+            && contents.parts.iter().any(|(part_name, part_value)| match part_value {
+                PartValue::Rarity(vrarity)
+                    if (part_name == "rarity"
+                        && vrarity.to_lowercase().matches(&rarity.to_lowercase()).next().is_some()) =>
+                {
+                    true
+                },
+                _ => false,
+            })
+    })
+}
+fn is_def_common(def: &&EntityDef) -> bool { filter_by_rarity(def, "common") }
+fn is_def_rare(def: &&EntityDef) -> bool { filter_by_rarity(def, "rare") }
+fn is_def_legendary(def: &&EntityDef) -> bool { filter_by_rarity(def, "legendary") }
+
 fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     fs::create_dir_all(format!("{}/generated/", out_dir)).unwrap();
 
     let (entities, entities_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/entities").unzip();
-    fs::write(format!("{}/generated/entity.rs", out_dir), codegen::generate_full_group(&entities, "i")).unwrap();
+    fs::write(format!("{}/generated/entity.rs", out_dir), generate_full_group(&entities, "i").to_string()).unwrap();
     println!("Total entities generated: {}", entities.len());
 
     let (items, items_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/items").unzip();
-    fs::write(format!("{}/generated/item.rs", out_dir), codegen::generate_full_group(&items, "i")).unwrap();
+    let mut items_body = generate_full_group(&items, "i");
+    items_body.raw(&generate_array_by_filter(&items, "ANY_COMMON", is_def_common));
+    items_body.raw(&generate_array_by_filter(&items, "ANY_RARE", is_def_rare));
+    items_body.raw(&generate_array_by_filter(&items, "ANY_LEGENDARY", is_def_legendary));
+    fs::write(format!("{}/generated/item.rs", out_dir), items_body.to_string()).unwrap();
     println!("Total items generated: {}", items.len());
 
     let (particles, particles_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/particles").unzip();
-    fs::write(format!("{}/generated/particle.rs", out_dir), codegen::generate_spawn_only(&particles, "p")).unwrap();
+    fs::write(format!("{}/generated/particle.rs", out_dir), generate_spawn_only(&particles, "p").to_string()).unwrap();
     println!("Total particles generated: {}", particles.len());
 
     for path in entities_path {

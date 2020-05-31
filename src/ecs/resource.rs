@@ -1,5 +1,6 @@
 use super::{component::*, tag};
 use crate::{
+    particle, item, entity,
     map::{Generator, Chunk},
     assets::AssetManager,
     attack::{ProjectileBuilder, ProjectileDef},
@@ -179,8 +180,8 @@ impl ProjectileBuilder for SpawnQueue {
 }
 
 pub enum SpawnItem {
-    Entity(String, Point2f),
-    Particle(String, Point2f),
-    Item(String, u32, Entity),
+    Entity(entity::ID, Point2f),
+    Particle(particle::ID, Point2f),
+    Item(item::ID, u32, Entity),
     Projectile(ProjectileDef),
 }

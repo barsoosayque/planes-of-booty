@@ -2,15 +2,20 @@ use crate::{
     assets::*,
     attack::{AttackPattern, ProjectileDef},
     math::*,
+    item
 };
 use enum_map::{Enum, EnumMap};
 use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
-use std::ops::RangeInclusive;
 use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
-use std::{collections::HashSet as Set, fmt, sync::Arc};
+use std::{
+    collections::{BTreeMap as Map, HashSet as Set},
+    fmt,
+    ops::RangeInclusive,
+    sync::Arc,
+};
 
 /////////////////////////
 // Inventory and Items //
@@ -281,6 +286,7 @@ impl From<Arc<ParticleDef>> for SharedParticleDef {
 }
 impl std::ops::Deref for SharedParticleDef {
     type Target = ParticleDef;
+
     fn deref(&self) -> &Self::Target { self.0.as_ref() }
 }
 
@@ -329,6 +335,27 @@ pub enum DamageType {
 #[storage(VecStorage)]
 pub struct Projectile {
     pub def: ProjectileDef,
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct SharedDropTable(Arc<DropTable>);
+impl From<Arc<DropTable>> for SharedDropTable {
+    fn from(arc: Arc<DropTable>) -> Self { Self(arc) }
+}
+impl std::ops::Deref for SharedDropTable {
+    type Target = DropTable;
+
+    fn deref(&self) -> &Self::Target { self.0.as_ref() }
+}
+#[derive(Default)]
+pub struct DropTable {
+    pub drop_chance: f32,
+
+    pub any_common: u16,
+    pub any_rare: u16,
+    pub any_legendary: u16,
+    pub assigned_drops: Map<item::ID, u16>,
 }
 
 /////////////

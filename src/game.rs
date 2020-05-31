@@ -49,7 +49,12 @@ impl Game {
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
             .with(DamageSystem, "damage_system", &["projectile_system", "impact_damage_system"])
-            .with(ExplodeOnDeathSystem, "explode_on_death_system", &["damage_system"])
+            // barrier for "on destruction" systems
+            .with_barrier()
+            .with(ExplodeOnDeathSystem, "explode_on_death_system", &[])
+            .with(LootGenerateSystem, "loot_generate_system", &[])
+            // Force destruction system to run the last
+            .with_thread_local(DestructionSystem)
             .build();
         world.insert(DeltaTime(std::time::Duration::new(0, 0)));
         world.insert(Camera::default());
@@ -123,8 +128,6 @@ impl EventHandler for Game {
         // consume input events
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
         self.dispatcher.dispatch(&self.world);
-        // Force destruction system to run the last
-        DestructionSystem.run_now(&self.world);
 
         // reset inputs
         self.world.write_resource::<Inputs>().mouse_scroll = 0.0;
@@ -134,19 +137,19 @@ impl EventHandler for Game {
             let mut assets = self.world.write_resource::<AssetManager>();
             match item {
                 SpawnItem::Entity(id, pos) => {
-                    let e = entity::spawn(&id, &self.world, ctx, &mut assets);
+                    let e = entity::spawn(id, &self.world, ctx, &mut assets);
                     if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
                         transform.pos = pos.to_vector();
                     }
                 },
                 SpawnItem::Particle(id, pos) => {
-                    let e = particle::spawn(&id, &self.world, ctx, &mut assets);
+                    let e = particle::spawn(id, &self.world, ctx, &mut assets);
                     if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
                         transform.pos = pos.to_vector();
                     }
                 },
                 SpawnItem::Item(id, count, to_e) => {
-                    let e = item::spawn(&id, &self.world, ctx, &mut assets);
+                    let e = item::spawn(id, &self.world, ctx, &mut assets);
                     if let Some(stack) = self.world.write_storage::<Stackable>().get_mut(e) {
                         stack.current = count;
                     }

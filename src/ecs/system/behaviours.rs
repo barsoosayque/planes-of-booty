@@ -1,19 +1,22 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{
     attack::{AttackPatternData, ProjectileData},
+    item,
     math::*,
-    read_event,
+    particle, read_event,
 };
+use itertools::Itertools;
 use nphysics2d::{
     algebra::ForceType,
     math::{Force, Isometry},
     object::{Body, RigidBody},
 };
+use rand::{distributions::weighted::alias_method::WeightedIndex, prelude::*};
 use specs::{
     storage::ComponentEvent, BitSet, Entities, Entity, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
     SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
 };
-use std::ops::DerefMut;
+use std::{collections::BTreeMap as Map, ops::DerefMut};
 
 pub struct ParticlesSystem;
 impl<'a> System<'a> for ParticlesSystem {
@@ -202,7 +205,7 @@ impl<'a> System<'a> for ProjectileSystem {
                     let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
                     behaviour.on_end(&mut data);
                 } else {
-                    spawn_queue.0.push_back(SpawnItem::Particle("splash".to_string(), transform.pos.to_point()));
+                    spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::Splash, transform.pos.to_point()));
                 }
             }
         }
@@ -453,7 +456,45 @@ impl<'a> System<'a> for ExplodeOnDeathSystem {
     fn run(&mut self, (mut spawn_queue, faction, transform, to_destruct): Self::SystemData) {
         for (faction, transform, _) in (&faction, &transform, &to_destruct).join() {
             if faction.id == FactionId::Pirates {
-                spawn_queue.0.push_back(SpawnItem::Particle("explosion".to_owned(), transform.pos.to_point()));
+                spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::Explosion, transform.pos.to_point()));
+            }
+        }
+    }
+}
+
+macro_rules! add_drops_from_group {
+    ($weight:expr; $group:expr => $map:expr) => {
+        if $weight > 0 {
+            for item in &$group {
+                *$map.entry(*item).or_insert(0) += $weight;
+            }
+        }
+    };
+}
+pub struct LootGenerateSystem;
+impl<'a> System<'a> for LootGenerateSystem {
+    type SystemData = (
+        WriteExpect<'a, SpawnQueue>,
+        ReadStorage<'a, SharedDropTable>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, tag::PendingDestruction>,
+    );
+
+    fn run(&mut self, (mut spawn_queue, drops, transform, to_destruct): Self::SystemData) {
+        for (drop, transform, _) in (&drops, &transform, &to_destruct).join() {
+            let mut rng = thread_rng();
+            if rng.gen::<f32>() <= drop.drop_chance {
+                let mut drop_map: Map<item::ID, u16> = Map::default();
+                add_drops_from_group!(drop.any_common; item::ANY_COMMON => drop_map);
+                add_drops_from_group!(drop.any_rare; item::ANY_RARE => drop_map);
+                add_drops_from_group!(drop.any_legendary; item::ANY_LEGENDARY => drop_map);
+                for (item, weight) in &drop.assigned_drops {
+                    *drop_map.entry(*item).or_insert(0) += weight;
+                }
+                let drop_arr = drop_map.into_iter().collect_vec();
+                let dist = WeightedIndex::new(drop_arr.iter().map(|item| item.1).collect()).unwrap();
+                let new_drop = drop_arr[dist.sample(&mut rng)].0;
+                log::debug!("Something dropped: {:?} !!", new_drop);
             }
         }
     }

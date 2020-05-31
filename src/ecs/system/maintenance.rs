@@ -1,10 +1,9 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
+use rand::{distributions::uniform::Uniform, thread_rng, Rng};
 use specs::prelude::*;
 use std::ops::DerefMut;
-use rand::{thread_rng, Rng};
-use rand::distributions::uniform::Uniform;
 
 pub struct CameraSystem;
 impl<'a> System<'a> for CameraSystem {
@@ -34,7 +33,7 @@ macro_rules! random_range {
         if let Some(range) = &$from {
             $to = $rng.sample(Uniform::new_inclusive(range.start(), range.end()));
         }
-    }
+    };
 }
 #[derive(Default)]
 pub struct RandomizedWeaponsSystem {
@@ -224,9 +223,9 @@ impl<'s> System<'s> for UiSystem<'_> {
 
         if let Some(id) = hub.debug_window.selected_entity {
             if data.inputs.mouse_clicked.contains(&MouseButton::Left) {
-                log::debug!("Spawn {} using debug tools", id);
+                log::debug!("Spawn {:?} using debug tools", id);
                 let pos = data.camera.project(&data.inputs.mouse_pos);
-                data.spawn_queue.0.push_back(SpawnItem::Entity(id.to_owned(), pos));
+                data.spawn_queue.0.push_back(SpawnItem::Entity(id, pos));
                 data.inputs.mouse_clicked.remove(&MouseButton::Left);
                 data.inputs.mouse_pressed.remove(&MouseButton::Left);
             } else if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
