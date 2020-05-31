@@ -12,9 +12,31 @@ pub struct EntityDef {
     pub name: String,
     pub components: Map<String, ComponentDef>,
     #[serde(default)]
+    pub shapeshifter_forms: Vec<ShapeshifterFormDef>,
+    #[serde(default)]
     pub shared_components: Map<String, ComponentDef>,
     #[serde(default)]
     pub tags: Vec<String>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct ShapeshifterFormDef {
+    pub form: String,
+    pub time: f32,
+    #[serde(default)]
+    pub conditions: Map<String, Map<String, Condition>>,
+    pub components: Map<String, ComponentDef>,
+}
+
+pub enum Condition {
+    Method(String)
+}
+impl std::fmt::Display for Condition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Method(m) => write!(f, ".{}()", m)
+        }
+    }
 }
 
 #[derive(Default)]
@@ -175,6 +197,24 @@ impl PartValue {
     }
 }
 
+struct ConditionVisitor;
+impl<'de> Visitor<'de> for ConditionVisitor {
+    type Value = Condition;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result { formatter.write_str("a map") }
+
+    fn visit_map<M: MapAccess<'de>>(self, mut access: M) -> Result<Self::Value, M::Error> {
+        if let Some((key, value)) = access.next_entry::<String, String>()? {
+            match key.as_ref() {
+                "method" => Ok(Condition::Method(value)),
+                _ => Err(de::Error::custom("unknown condition"))
+            }
+        } else {
+            Err(de::Error::custom("empty map"))
+        }
+    }
+}
+
 struct ComponentDefVisitor;
 impl<'de> Visitor<'de> for ComponentDefVisitor {
     type Value = ComponentDef;
@@ -286,6 +326,12 @@ impl<'de> Visitor<'de> for PartValueVisitor {
         } else {
             Err(de::Error::custom(format!("No special fields defined. Here is buffer: {:?}", buffer)))
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Condition {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_map(ConditionVisitor)
     }
 }
 

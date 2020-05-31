@@ -68,6 +68,7 @@ impl Game {
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<Reflection>();
+        world.register::<Shapeshifter>();
         world.register::<DistanceCounter>();
         world.register::<DistanceLimited>();
         world.register::<Movement>();
@@ -131,6 +132,9 @@ impl EventHandler for Game {
         // consume input events
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
         self.dispatcher.dispatch(&self.world);
+        // shapeshifter is a special kind of system, as it requires
+        // ggez context
+        ShapeshifterSystem(ctx).run_now(&self.world);
 
         // reset inputs
         self.world.write_resource::<Inputs>().mouse_scroll = 0.0;

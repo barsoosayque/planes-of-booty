@@ -9,13 +9,33 @@ use nphysics2d::{
     ncollide2d::shape::ShapeHandle,
     object::{DefaultBodyHandle, DefaultColliderHandle},
 };
-use specs::{Component, Entity, FlaggedStorage, VecStorage, World, WorldExt};
+use specs::{Component, Entity, FlaggedStorage, LazyUpdate, VecStorage, World, WorldExt};
 use std::{
     collections::{BTreeMap as Map, HashSet as Set},
     fmt,
     ops::RangeInclusive,
     sync::Arc,
 };
+
+//////////////////////////
+// Shapeshifting system //
+//////////////////////////
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct Shapeshifter {
+    pub current: usize,
+    pub time: f32,
+    pub forms: &'static[&'static dyn ShapeshifterForm]
+}
+
+pub type ShapeshifterFormData<'a> = (&'a mut AssetManager, &'a mut ggez::Context);
+pub trait ShapeshifterForm: Sync + Send {
+    fn time(&self) -> f32;
+    fn can_update<'a>(&self, e: Entity, world: &World) -> bool;
+    fn on_begin<'a>(&self, e: Entity, update: &LazyUpdate, data: ShapeshifterFormData<'a>);
+    fn on_end<'a>(&self, e: Entity, update: &LazyUpdate, data: ShapeshifterFormData<'a>);
+}
 
 /////////////////////////
 // Inventory and Items //

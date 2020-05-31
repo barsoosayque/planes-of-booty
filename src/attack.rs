@@ -89,9 +89,8 @@ impl AttackPattern for Hook {
     }
 }
 
-pub struct Ram;
-impl Ram {
-    const POWER: f32 = 4000.0;
+pub struct Ram {
+    pub power: f32
 }
 impl AttackPattern for Ram {
     fn description(&self) -> &str {
@@ -100,7 +99,7 @@ impl AttackPattern for Ram {
 
     fn attack(&self, data: &mut AttackPatternData) {
         if let Some(body) = &mut data.shooter_body {
-            let throw = data.prop.shooting_normal * Self::POWER;
+            let throw = data.prop.shooting_normal * self.power;
             body.apply_force(0, &Force::linear([throw.x, throw.y].into()), ForceType::VelocityChange, true);
         }
         if let Some(dmg_rec) = &mut data.shooter_damage_reciever {

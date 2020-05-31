@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+#![allow(warnings)]
 use crate::ecs::{component, resource, tag};
 
 // see `build/build.rs` for code generation

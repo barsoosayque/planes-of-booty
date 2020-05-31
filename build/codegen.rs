@@ -1,8 +1,8 @@
-use crate::def::{ComponentDef, EntityDef, PartValue};
+use crate::def::{ComponentDef, EntityDef, PartValue, ShapeshifterFormDef};
 use codegen::*;
 use heck::{CamelCase, ShoutySnakeCase, SnakeCase};
-use std::collections::BTreeSet as Set;
 use itertools::Itertools;
+use std::collections::{BTreeMap as Map, BTreeSet as Set};
 
 pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
     let mut scope = Scope::new();
@@ -27,19 +27,22 @@ pub fn generate_spawn_only(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
 
 pub fn generate_names_enum(defs: &Vec<EntityDef>) -> String {
     let names = defs.into_iter().map(|def| def.name.to_camel_case());
-    let r#enum = format!("#[allow(dead_code)] #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)] pub enum ID{{{}}}", names.clone().join(","));
-    let array = format!(
-        "#[allow(dead_code)] pub const IDS: [ID; {}] = [{}];",
-        names.len(),
-        names.map(|n| format!("ID::{}", n)).join(",")
+    let r#enum = format!(
+        "#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)] pub enum ID{{{}}}",
+        names.clone().join(",")
     );
+    let array = format!("pub const IDS: [ID; {}] = [{}];", names.len(), names.map(|n| format!("ID::{}", n)).join(","));
     format!("{}\n{}", r#enum, array)
 }
 
-pub fn generate_array_by_filter<F: FnMut(&&EntityDef) -> bool>(defs: &Vec<EntityDef>, array_name: &str, filter: F) -> String {
+pub fn generate_array_by_filter<F: FnMut(&&EntityDef) -> bool>(
+    defs: &Vec<EntityDef>,
+    array_name: &str,
+    filter: F,
+) -> String {
     let defs = defs.into_iter().filter(filter).collect_vec();
     format!(
-        "#[allow(dead_code)] pub const {}: [ID; {}] = [{}];",
+        "pub const {}: [ID; {}] = [{}];",
         array_name,
         defs.len(),
         defs.iter().map(|d| format!("ID::{}", d.name.to_camel_case())).join(",")
@@ -55,7 +58,6 @@ pub fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
         .arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
-    fn_gen.allow("dead_code");
 
     fn_gen.line("match id {");
     for def in defs {
@@ -66,11 +68,12 @@ pub fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
 }
 
 fn get_view_from<'a>(
-    def: &'a EntityDef,
+    id: &str,
+    from: &'a Map<String, ComponentDef>,
     component_name: &str,
     asset_part: &str,
 ) -> Option<(&'a PartValue, &'a PartValue)> {
-    def.components.get(component_name).map(|comp| {
+    from.get(component_name).map(|comp| {
         (
             comp.parts
                 .get(asset_part)
@@ -79,10 +82,8 @@ fn get_view_from<'a>(
                     PartValue::Directional { north, .. } => north.as_ref(),
                     _ => panic!("{} should be either single or directional", component_name),
                 })
-                .expect(&format!("{} field is missing for component {} in {}", asset_part, component_name, def.name)),
-            comp.parts
-                .get("size")
-                .expect(&format!("width field is missing component for {} in {}", component_name, def.name)),
+                .expect(&format!("{} field is missing for component {} ({})", asset_part, component_name, id)),
+            comp.parts.get("size").expect(&format!("width field is missing component for {} ({})", component_name, id)),
         )
     })
 }
@@ -92,12 +93,13 @@ pub fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
     fn_gen.arg("id", "ID").arg("ctx", "&mut ggez::Context").arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, crate::math::Size2f)>");
     fn_gen.vis("pub");
-    fn_gen.allow("dead_code");
 
     fn_gen.line("match id {");
     for def in defs {
         let name = def.name.to_camel_case();
-        match get_view_from(def, "Sprite", "asset") {
+        match get_view_from(&def.name, &def.components, "Sprite", "asset")
+            .or(def.shapeshifter_forms.first().and_then(|f| get_view_from(&def.name, &f.components, "Sprite", "asset")))
+        {
             Some(asset) => fn_gen.line(&format!("ID::{} => Some(({}, {})),", name, asset.0, asset.1)),
             None => fn_gen.line(&format!("ID::{} => None,", name)),
         };
@@ -152,6 +154,41 @@ fn stringify_component(name: &str, contents: &ComponentDef) -> String {
         body
     }
 }
+fn shapeshifter_impl(form: &ShapeshifterFormDef) -> (String, String) {
+    let struct_name = format!("ShapeshifterForm{}", form.form.to_camel_case());
+    let r#struct = format!("struct {};", struct_name);
+    let on_begin_body = form
+        .components
+        .iter()
+        .map(|(name, def)| format!("update.insert(e, {});", stringify_component(name, def)))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let on_end_body = form
+        .components
+        .iter()
+        .map(|(name, _)| format!("update.remove::<component::{}>(e);", name))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let can_update_body = form
+        .conditions
+        .iter()
+        .map(|(component, conditions)| {
+            let conditions = conditions.iter().map(|(field, condition)| format!("c.{}{}", field, condition)).join("&&");
+            format!("{{world.read_storage::<component::{}>().get(e).map(|c| {}).unwrap_or(true)}}", component, conditions)
+        })
+        .collect::<Vec<_>>()
+        .join("&&");
+    let r#impl = format!(
+        "impl component::ShapeshifterForm for {} {{\n\
+            fn can_update<'a>(&self, e: specs::Entity, world: &specs::World) -> bool{{{}}}\n\
+            fn on_begin<'a>(&self, e: specs::Entity, update: &specs::LazyUpdate, (assets, ctx): component::ShapeshifterFormData<'a>){{{}}}\n\
+            fn on_end<'a>(&self, e: specs::Entity, update: &specs::LazyUpdate, (assets, ctx): component::ShapeshifterFormData<'a>){{{}}}\n\
+            fn time(&self) -> f32 {{{}f32}}\n\
+        }}",
+        struct_name, if can_update_body.is_empty() { "true" } else { &can_update_body }, on_begin_body, on_end_body, form.time
+    );
+    (struct_name, format!("{}\n{}", r#struct, r#impl))
+}
 pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
     // collect unique initialize and finalize lines from sorted parts
     let mut buffers: (Set<String>, Set<String>) = (Set::new(), Set::new());
@@ -175,7 +212,22 @@ pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
         .arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("specs::Entity");
     fn_gen.vis("pub");
-    fn_gen.allow("dead_code");
+
+    if !def.shapeshifter_forms.is_empty() {
+        let mut forms: Vec<String> = vec![];
+        for form in &def.shapeshifter_forms {
+            let (struct_name, definition) = shapeshifter_impl(&form);
+            let var_name = struct_name.to_shouty_snake_case();
+            fn_gen.line(definition);
+            fn_gen.line(format!("const {}: {} = {};", var_name, struct_name, struct_name));
+            forms.push(format!("&{}", var_name));
+        }
+        fn_gen.line(format!(
+            "const SHAPESHIFTER_FORMS: [&'static dyn component::ShapeshifterForm; {}] = [{}];",
+            forms.len(),
+            forms.join(",")
+        ));
+    }
 
     fn_gen.line("use specs::{WorldExt,world::Builder};");
     for line in buffers.0 {
@@ -210,6 +262,14 @@ pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
     }
     for (name, _) in &def.shared_components {
         fn_gen.line(format!(".with(component::Shared{}::from(shared_{}))", name, name.to_snake_case()));
+    }
+    if !def.shapeshifter_forms.is_empty() {
+        // use first shape
+        for (name, contents) in &def.shapeshifter_forms.first().unwrap().components {
+            let contents = stringify_component(&name, &contents);
+            fn_gen.line(format!(".with({})", contents));
+        }
+        fn_gen.line(".with(component::Shapeshifter{forms:&SHAPESHIFTER_FORMS,current:0,time:0.0})");
     }
     fn_gen.line(&format!(".with(component::Reflection{{id:\"{}_{}\"}})", reflection_prefix, def.name));
     fn_gen.line(".build();");

@@ -1,5 +1,6 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{
+    assets::AssetManager,
     attack::{AttackPatternData, ProjectileData},
     entity, item,
     math::*,
@@ -13,10 +14,44 @@ use nphysics2d::{
 };
 use rand::{distributions::weighted::alias_method::WeightedIndex, prelude::*};
 use specs::{
-    storage::ComponentEvent, BitSet, Entities, Entity, Join, Read, ReadExpect, ReadStorage, ReaderId, System,
-    SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
+    storage::ComponentEvent, BitSet, Entities, Entity, Join, LazyUpdate, Read, ReadExpect, ReadStorage, ReaderId,
+    System, SystemData, World, WorldExt, Write, WriteExpect, WriteStorage,
 };
-use std::{collections::BTreeMap as Map, ops::DerefMut};
+use std::{
+    collections::BTreeMap as Map,
+    ops::{Deref, DerefMut},
+};
+
+pub struct ShapeshifterSystem<'a>(pub &'a mut ggez::Context);
+impl<'a> System<'a> for ShapeshifterSystem<'a> {
+    type SystemData = (
+        Entities<'a>,
+        Read<'a, DeltaTime>,
+        Read<'a, LazyUpdate>,
+        WriteExpect<'a, AssetManager>,
+        WriteStorage<'a, Shapeshifter>,
+    );
+
+    fn run(&mut self, (entities, dt, update, mut assets, mut shapeshifters): Self::SystemData) {
+        let dt = dt.0.as_secs_f32();
+        for (e, shapeshifter) in (&entities, &mut shapeshifters).join() {
+            if shapeshifter.time >= shapeshifter.forms[shapeshifter.current].time() {
+                let next = (shapeshifter.current + 1) % shapeshifter.forms.len();
+                shapeshifter.forms[shapeshifter.current].on_end(e, update.deref(), (&mut assets, &mut self.0));
+                shapeshifter.forms[next].on_begin(e, update.deref(), (&mut assets, &mut self.0));
+                shapeshifter.current = next;
+                shapeshifter.time = 0.0;
+            }
+            update.exec(move |world| {
+                let mut shapeshifters = world.write_storage::<Shapeshifter>();
+                let mut shapeshifter = shapeshifters.get_mut(e).unwrap();
+                if shapeshifter.forms[shapeshifter.current].can_update(e, &world) {
+                    shapeshifter.time += dt;
+                }
+            });
+        }
+    }
+}
 
 pub struct ParticlesSystem;
 impl<'a> System<'a> for ParticlesSystem {
@@ -455,7 +490,10 @@ impl<'a> System<'a> for ContainerSinkSystem {
         WriteStorage<'a, tag::PendingDestruction>,
     );
 
-    fn run(&mut self, (entities, mut spawn_queue, transforms, inventories, containers, mut to_destruct): Self::SystemData) {
+    fn run(
+        &mut self,
+        (entities, mut spawn_queue, transforms, inventories, containers, mut to_destruct): Self::SystemData,
+    ) {
         for (e, transform, inventory, _) in (&entities, &transforms, &inventories, &containers).join() {
             if !inventory.content.have_some() {
                 to_destruct.insert(e, tag::PendingDestruction).unwrap();

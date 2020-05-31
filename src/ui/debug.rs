@@ -38,16 +38,12 @@ impl<'a> UiBuilder<&mut UiData<'a>> for DebugWindow {
                 ui.columns(2, im_str!("add_item_col"), false);
                 ui.set_current_column_width(150.0);
                 ChildWindow::new("add_item").size([0.0, 100.0]).border(true).build(&ui, || {
-                    ui.columns(2, im_str!("add_item_col_inner"), false);
-                    ui.set_current_column_width(30.0);
                     for id in &item::IDS {
-                        let (asset, _) = item::view(*id, ctx.as_mut(), &mut data.assets).unwrap();
-                        let tex_id = ctx.get_texture_id_for(&asset);
-                        Image::new(tex_id, [30.0, 30.0]).build(ui);
-                    }
-                    ui.next_column();
-                    ui.set_current_column_width(120.0);
-                    for id in &item::IDS {
+                        if let Some((asset, _)) = item::view(*id, ctx.as_mut(), &mut data.assets) {
+                            let tex_id = ctx.get_texture_id_for(&asset);
+                            Image::new(tex_id, [30.0, 30.0]).build(ui);
+                            ui.same_line(10.0);
+                        }
                         let label = ImString::new(format!("{:?}", id));
                         if Selectable::new(&label).selected(self.selected_item == Some(*id)).size([0.0, 30.0]).build(&ui) {
                             self.selected_item = Some(*id);
