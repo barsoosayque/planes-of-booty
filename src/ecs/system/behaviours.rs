@@ -1,7 +1,7 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{
     attack::{AttackPatternData, ProjectileData},
-    item,
+    entity, item,
     math::*,
     particle, read_event,
 };
@@ -494,7 +494,10 @@ impl<'a> System<'a> for LootGenerateSystem {
                 let drop_arr = drop_map.into_iter().collect_vec();
                 let dist = WeightedIndex::new(drop_arr.iter().map(|item| item.1).collect()).unwrap();
                 let new_drop = drop_arr[dist.sample(&mut rng)].0;
-                log::debug!("Something dropped: {:?} !!", new_drop);
+                log::debug!("Spawning new lootbox with {:?}", new_drop);
+                spawn_queue
+                    .0
+                    .push_back(SpawnItem::Entity(entity::ID::Lootbox, transform.pos.to_point(), vec![new_drop]));
             }
         }
     }

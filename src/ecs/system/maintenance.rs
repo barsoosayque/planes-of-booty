@@ -225,9 +225,7 @@ impl<'s> System<'s> for UiSystem<'_> {
             if data.inputs.mouse_clicked.contains(&MouseButton::Left) {
                 log::debug!("Spawn {:?} using debug tools", id);
                 let pos = data.camera.project(&data.inputs.mouse_pos);
-                data.spawn_queue.0.push_back(SpawnItem::Entity(id, pos));
-                data.inputs.mouse_clicked.remove(&MouseButton::Left);
-                data.inputs.mouse_pressed.remove(&MouseButton::Left);
+                data.spawn_queue.0.push_back(SpawnItem::Entity(id, pos, vec![]));
             } else if data.inputs.mouse_clicked.contains(&MouseButton::Right) {
                 hub.debug_window.selected_entity = None;
             }

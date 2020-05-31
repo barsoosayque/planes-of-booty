@@ -180,7 +180,7 @@ impl ProjectileBuilder for SpawnQueue {
 }
 
 pub enum SpawnItem {
-    Entity(entity::ID, Point2f),
+    Entity(entity::ID, Point2f, Vec<item::ID>),
     Particle(particle::ID, Point2f),
     Item(item::ID, u32, Entity),
     Projectile(ProjectileDef),

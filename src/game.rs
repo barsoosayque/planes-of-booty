@@ -12,6 +12,7 @@ use nphysics2d::{
     ncollide2d::{pipeline::object::CollisionGroups, shape},
     object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
 };
+use itertools::Itertools;
 use specs::prelude::*;
 
 pub struct Game {
@@ -136,10 +137,19 @@ impl EventHandler for Game {
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
             let mut assets = self.world.write_resource::<AssetManager>();
             match item {
-                SpawnItem::Entity(id, pos) => {
+                SpawnItem::Entity(id, pos, items) => {
                     let e = entity::spawn(id, &self.world, ctx, &mut assets);
                     if let Some(transform) = self.world.write_storage::<Transform>().get_mut(e) {
                         transform.pos = pos.to_vector();
+                    }
+                    // can't create entities while any storage is borrowed
+                    if self.world.read_storage::<Inventory>().contains(e) {
+                        let items = items.into_iter().map(|id| item::spawn(id, &self.world, ctx, &mut assets)).collect_vec();
+                        if let Some(inventory) = self.world.write_storage::<Inventory>().get_mut(e) {
+                            for item in items {
+                                 inventory.content.add(&self.world, item);
+                            }
+                        }
                     }
                 },
                 SpawnItem::Particle(id, pos) => {

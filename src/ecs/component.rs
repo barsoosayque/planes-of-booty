@@ -36,9 +36,9 @@ pub struct Inventory {
     pub content: Content,
 }
 #[derive(Debug)]
-pub struct Content(Vec<ItemBox>, Option<u32>);
+pub struct Content(Vec<ItemBox>);
 impl Default for Content {
-    fn default() -> Self { Content(vec![None], None) }
+    fn default() -> Self { Content(vec![None]) }
 }
 impl Content {
     pub fn add(&mut self, world: &World, item: Entity) {
@@ -76,6 +76,7 @@ impl Content {
                 break;
             }
         }
+        self.maintain();
     }
 
     pub fn maintain(&mut self) {
