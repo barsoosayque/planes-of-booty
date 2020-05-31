@@ -16,3 +16,17 @@ impl Default for Silhouette {
 impl ShaderInName for Silhouette {
     fn name() -> &'static str { "SilhouetteData" }
 }
+
+// Data for outline shader
+gfx_defines! {
+    constant Outline {
+        outline_color: [f32; 4] = "u_outline_color",
+        step: [f32; 2] = "u_step",
+    }
+}
+impl Default for Outline {
+    fn default() -> Self { Self { outline_color: [1.0, 1.0, 1.0, 1.0], step: [0.0, 0.0] } }
+}
+impl ShaderInName for Outline {
+    fn name() -> &'static str { "OutlineData" }
+}

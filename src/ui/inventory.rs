@@ -187,7 +187,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
         let mut for_deletion: Set<Entity> = Set::new();
         for e in &self.show_inventories_for {
             let mut is_opened = true;
-            within_window!(Window::new(im_str!("Inventory"))
+            within_window!(Window::new(&ImString::new(format!("Inventory##{}", e.id())))
             .resizable(false)
             .focus_on_appearing(true)
             .opened(&mut is_opened)

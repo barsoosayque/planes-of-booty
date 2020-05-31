@@ -21,6 +21,11 @@ use std::collections::{HashSet, VecDeque as Queue};
 pub struct DeltaTime(pub std::time::Duration);
 
 #[derive(Default, Debug)]
+pub struct InteractionCache {
+    pub near_inventory: Option<Entity>,
+}
+
+#[derive(Default, Debug)]
 pub struct Camera {
     pub pos: Vec2f,
     pub target: Option<Entity>,

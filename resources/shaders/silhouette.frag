@@ -5,10 +5,6 @@ in vec2 v_Uv;
 in vec4 v_Color;
 out vec4 Target0;
 
-layout (std140) uniform Globals {
-    mat4 u_MVP;
-};
-
 layout (std140) uniform SilhouetteData {
     vec4 u_silhouette_color;
 };

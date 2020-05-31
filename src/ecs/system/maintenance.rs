@@ -1,6 +1,7 @@
 use super::super::{component::*, resource::*, tag};
 use crate::{math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
+use itertools::Itertools;
 use rand::{distributions::uniform::Uniform, thread_rng, Rng};
 use specs::prelude::*;
 use std::ops::DerefMut;
@@ -63,12 +64,35 @@ impl<'a> System<'a> for RandomizedWeaponsSystem {
         self.reader_id = Some(world.write_storage::<RandomizedWeaponProperties>().register_reader());
     }
 }
+pub struct InteractionSystem;
+impl<'a> System<'a> for InteractionSystem {
+    type SystemData = (
+        Entities<'a>,
+        Write<'a, InteractionCache>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, Inventory>,
+        ReadStorage<'a, tag::Player>,
+    );
 
+    fn run(&mut self, (entities, mut interaction, transforms, inventories, tag): Self::SystemData) {
+        for (transform, _) in (&transforms, &tag).join() {
+            let near_inventory = (&entities, &inventories, &transforms, !&tag)
+                .join()
+                .map(|(e, _, t, _)| (e, (t.pos - transform.pos).length()))
+                .filter(|(_, distance)| *distance <= 50.0)
+                .fold1(|t1, t2| if t1.1 < t2.1 { t1 } else { t2 });
+            interaction.near_inventory = near_inventory.map(|(e, _)| e);
+        }
+    }
+}
 pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
     type SystemData = (
-        WriteStorage<'a, Movement>,
+        Entities<'a>,
         ReadStorage<'a, Transform>,
+        WriteStorage<'a, Movement>,
+        WriteExpect<'a, UiHub>,
+        Read<'a, InteractionCache>,
         Read<'a, Inputs>,
         Read<'a, Camera>,
         ReadStorage<'a, tag::Player>,
@@ -78,9 +102,9 @@ impl<'a> System<'a> for InputsSystem {
 
     fn run(
         &mut self,
-        (mut movements, transforms, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData,
+        (entities, transforms, mut movements, mut ui, interaction, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData,
     ) {
-        for (movement, _) in (&mut movements, &tag).join() {
+        for (e, movement, _) in (&entities, &mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
             if inputs.pressed_keys.contains(&KeyCode::W) {
                 direction.y -= 1.0;
@@ -95,6 +119,15 @@ impl<'a> System<'a> for InputsSystem {
                 direction.x += 1.0;
             };
             movement.target_acceleration_normal = direction.try_normalize().unwrap_or_default();
+
+            if inputs.pressed_keys.contains(&KeyCode::I) {
+                ui.inventory_window.show_inventories_for.insert(e);
+            };
+            if inputs.pressed_keys.contains(&KeyCode::E) {
+                if let Some(near_inventory_e) = interaction.near_inventory {
+                    ui.inventory_window.show_inventories_for.insert(near_inventory_e);
+                }
+            };
         }
         for (transform, weaponry, _) in (&transforms, &mut weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {

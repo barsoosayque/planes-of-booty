@@ -9,7 +9,8 @@ use specs::{Entities, Join, Read, ReadExpect, ReadStorage, System, Write};
 
 pub struct ParticleRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for ParticleRenderSystem<'a> {
-    type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, ParticleProperties>, ReadStorage<'a, SharedParticleDef>);
+    type SystemData =
+        (ReadStorage<'a, Transform>, ReadStorage<'a, ParticleProperties>, ReadStorage<'a, SharedParticleDef>);
 
     fn run(&mut self, (transforms, props, defs): Self::SystemData) {
         let groups = (&transforms, &props, &defs)
@@ -22,7 +23,7 @@ impl<'a> System<'a> for ParticleRenderSystem<'a> {
             for (transform, prop, def) in group {
                 let scale = Vec2f::new(
                     (def.size.width * def.sheet_width as f32) / asset.width() as f32,
-                    (def.size.height * def.sheet_height as f32)/ asset.height() as f32,
+                    (def.size.height * def.sheet_height as f32) / asset.height() as f32,
                 );
 
                 let (frame_x, frame_y) = (prop.current_frame % def.sheet_width, prop.current_frame / def.sheet_width);
@@ -65,31 +66,49 @@ impl<'a> System<'a> for UiRenderSystem<'_> {
 pub struct SpriteRenderSystem<'a>(pub &'a mut Context);
 impl<'a> System<'a> for SpriteRenderSystem<'_> {
     type SystemData = (
+        Entities<'a>,
         Write<'a, AssetManager>,
+        Read<'a, InteractionCache>,
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Sprite>,
         ReadStorage<'a, SpriteBlink>,
         ReadStorage<'a, Directional>,
     );
 
-    fn run(&mut self, (mut assets, transforms, sprites, blinks, directionals): Self::SystemData) {
-        let blink_sh = assets.get::<ShaderAsset<shader::Silhouette>>("/shaders/silhouette.frag", self.0).unwrap();
-        for (transform, sprite, directional_opt, blink_opt) in
-            (&transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join()
+    fn run(
+        &mut self,
+        (entities, mut assets, interaction, transforms, sprites, blinks, directionals): Self::SystemData,
+    ) {
+        for (e, transform, sprite, directional_opt, blink_opt) in
+            (&entities, &transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join()
         {
-            let _lock = if blink_opt.is_some() { Some(graphics::use_shader(self.0, &blink_sh)) } else { None };
-
-            //  = graphics::use_shader();
-            match &sprite.asset {
-                SpriteAsset::Single { value } => {
-                    render_sprite(self.0, &value, &transform.pos, &transform.rotation, &sprite.size);
-                },
+            let img = match &sprite.asset {
+                SpriteAsset::Single { value } => Some(value),
                 SpriteAsset::Directional { north, east, south, west } => {
                     if let Some(Directional { direction }) = directional_opt {
-                        let img = directional!(direction => &north, &east, &south, &west);
-                        render_sprite(self.0, &img, &transform.pos, &transform.rotation, &sprite.size);
+                        Some(directional!(direction => north, east, south, west))
+                    } else {
+                        None
                     }
                 },
+            };
+            if let Some(img) = img {
+                let _lock = if blink_opt.is_some() {
+                    let s = assets.get::<ShaderAsset<shader::Silhouette>>("/shaders/silhouette.frag", self.0).unwrap();
+                    Some(graphics::use_shader(self.0, &s))
+                } else if interaction.near_inventory == Some(e) {
+                    let s = assets.get::<ShaderAsset<shader::Outline>>("/shaders/outline.frag", self.0).unwrap();
+                    s.send(self.0, shader::Outline {
+                        step: [4.0 / img.width() as f32, 4.0 / img.height() as f32],
+                        ..shader::Outline::default()
+                    })
+                    .unwrap();
+                    Some(graphics::use_shader(self.0, &s))
+                } else {
+                    None
+                };
+
+                render_sprite(self.0, &img, &transform.pos, &transform.rotation, &sprite.size);
             }
         }
     }
