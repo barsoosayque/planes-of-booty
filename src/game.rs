@@ -90,12 +90,14 @@ impl Game {
         world.register::<WeaponProperties>();
         world.register::<WeaponAttack>();
         world.register::<Weaponry>();
+        world.register::<Hotbar>();
         world.register::<HealthPool>();
         world.register::<DamageDealer>();
         world.register::<DamageReciever>();
         world.register::<Projectile>();
         world.register::<SharedParticleDef>();
         world.register::<ParticleProperties>();
+        world.register::<ConsumeAction>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };

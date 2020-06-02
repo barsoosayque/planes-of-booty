@@ -98,11 +98,16 @@ macro_rules! item_tooltip {
             }
             $ui.text(&ImString::new(attack.pattern.description()));
         }
+        if let Some(consumable) = $data.consumables.get($item) {
+            $ui.separator();
+            $ui.text_colored([0.81, 0.48, 0.72, 1.0], im_str!("It's a consumable:"));
+            $ui.text(&ImString::new(consumable.consumable.description()));
+        }
         if let Some(quality) = $data.qualities.get($item) {
             $ui.separator();
             let color = match quality.rarity {
                 Rarity::Common => [0.4, 0.4, 0.4, 1.0],
-                Rarity::Rare => [0.29, 0.48, 0.64, 1.0],
+                Rarity::Rare => [0.0, 0.48, 1.0, 1.0],
                 Rarity::Legendary => [1.0, 0.9, 0.36, 1.0],
             };
             $ui.text_colored(color, &format!("Rarity: {}", quality.rarity));
@@ -203,6 +208,26 @@ impl<'a> UiBuilder<&mut UiData<'a>> for InventoryWindow {
                             ui.text(txt);
                         } else {
                             items!(self, &mut inventory, ui, ctx, data);
+                        }
+                    });
+                }
+                if let Some(hotbar) = data.hotbars.get_mut(*e) {
+                    ui.bullet_text(im_str!("Hotbar:"));
+                    within_window!(ChildWindow::new("hotbar").size([380.0, 70.0]), &ui => {
+                        let slots_size = hotbar.content.len();
+                        let [max_w, _] = ui.content_region_max();
+                        for (i, mut item_box) in hotbar.content.iter_mut().enumerate() {
+                            let pos = [
+                                (Self::PCELL * i as f32) + (max_w - (Self::PCELL) * slots_size as f32) * 0.5,
+                                Self::PAD
+                            ];
+
+                            if item_box!(self, item_box, pos, ui, ctx, data) {
+                                let item = self.dragging_item().unwrap();
+                                if data.consumables.get(item).is_some() {
+                                    drag_and_drop!(&mut item_box, &mut self.dragging_item, data);
+                                }
+                            }
                         }
                     });
                 }

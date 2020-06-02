@@ -1,5 +1,6 @@
 use super::system::{UiBuilder, UiContext};
 use crate::{
+    centered_text,
     assets::*,
     ecs::{component::*, resource::UiData},
     within_window,
@@ -20,11 +21,12 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                 .collapsible(false)
                 .title_bar(false)
                 .focus_on_appearing(false)
-                .size([0.0, 0.0], Condition::Always), &ui => {
+                .size([90.0, 125.0], Condition::Always), &ui => {
+                    ui.set_cursor_pos([15.0, 10.0]);
                     let hp_base = data.assets.get::<ImageAsset>("/sprites/ui/hp-base.png", ctx.as_mut()).unwrap();
                     let hp_fill = data.assets.get::<ImageAsset>("/sprites/ui/hp-fill.png", ctx.as_mut()).unwrap();
 
-                    let pos = ui.cursor_start_pos();
+                    let pos = ui.cursor_pos();
                     Image::new(ctx.get_texture_id_for(&hp_base), [60.0, 60.0]).build(ui);
 
                     let hp_lack = 1.0 - (hpool.hp as f32 / hpool.max_hp as f32);
@@ -33,7 +35,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                         .uv0([0.0, hp_lack])
                         .build(ui);
 
-                    ui.text(format!("Health:\n{} / {}", hpool.hp, hpool.max_hp));
+                    centered_text!(ui; format!("Health:\n{} / {}", hpool.hp, hpool.max_hp); width);
             });
         }
 
@@ -46,21 +48,49 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                 .collapsible(false)
                 .title_bar(false)
                 .focus_on_appearing(false)
-                .size([0.0, 0.0], Condition::Always), &ui => {
-                    if let Some(Sprite{ asset: SpriteAsset::Single { value }, ..}) = 
-                        weaponry.primary.and_then(|e| data.sprites.get(e)) 
-                    {
-                        Image::new(ctx.get_texture_id_for(&value), [60.0, 60.0]).build(ui);
-                    }
-                    if let Some(prop) = weaponry.primary.and_then(|e| data.wpn_props.get(e)) {
-                        ui.text(format!("Clip:\n{} / {}", prop.clip, prop.clip_size));
-                        if prop.reloading > 0.0 {
-                            ui.text("> Reload");
-                        } else if prop.cooldown > 0.0 {
-                            ui.text(format!("> {:.0}%", (1.0 - prop.cooldown / prop.cooldown_time) * 100.0));
-                        } else {
-                            ui.text("> Ready");
+                .size([90.0, 125.0], Condition::Always), &ui => {
+                    if let Some(weapon) = weaponry.primary {
+                        if let Some(Sprite{ asset: SpriteAsset::Single { value }, ..}) = data.sprites.get(weapon) {
+                            ui.set_cursor_pos([15.0, 10.0]);
+                            Image::new(ctx.get_texture_id_for(&value), [60.0, 60.0]).build(ui);
                         }
+                        if let Some(prop) = data.wpn_props.get(weapon) {
+                            centered_text!(ui; format!("Clip:\n{} / {}", prop.clip, prop.clip_size); width);
+                            if prop.reloading > 0.0 {
+                                centered_text!(ui; "> Reload"; width);
+                            } else if prop.cooldown > 0.0 {
+                                centered_text!(ui; format!("> {:.0}%", (1.0 - prop.cooldown / prop.cooldown_time) * 100.0); width);
+                            } else {
+                                centered_text!(ui; "> Ready"; width);
+                            }
+                        }
+                    } else {
+                        centered_text!(ui; "Nothing\nEquiped"; width, height);
+                    }
+            });
+        }
+
+        if let Some((hotbar, _)) = (&data.hotbars, &data.player_tag).join().next() {
+            within_window!(Window::new(im_str!("Hotbar"))
+                .position([ui.io().display_size[0] * 0.5, ui.io().display_size[1]], Condition::Always)
+                .position_pivot([0.5, 1.0])
+                .resizable(false)
+                .movable(false)
+                .collapsible(false)
+                .title_bar(false)
+                .focus_on_appearing(false), &ui => {
+                    for (i, item_box) in hotbar.content.iter().enumerate() {
+                        let [x, y] = ui.cursor_start_pos();
+                        ui.set_cursor_pos([x + i as f32 * 70.0, y]);
+                        let frame = data.assets.get::<ImageAsset>("/sprites/ui/item-frame.png", ctx.as_mut()).unwrap();
+                        let pos = ui.cursor_pos();
+                        Image::new(ctx.get_texture_id_for(&frame), [50.0, 50.0]).build(ui);
+                        if let Some(Sprite{ asset: SpriteAsset::Single { value }, ..}) = item_box.and_then(|i| data.sprites.get(i)) {
+                            ui.set_cursor_pos(pos);
+                            Image::new(ctx.get_texture_id_for(&value), [50.0, 50.0]).build(ui);
+                        }
+                        ui.set_cursor_pos([pos[0] + 17.0, 45.0]);
+                        ui.text(&format!("[{}]", i + 1));
                     }
             });
         }

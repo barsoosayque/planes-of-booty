@@ -1,7 +1,7 @@
 use crate::{
     assets::*,
     attack::{AttackPattern, ProjectileDef},
-    item,
+    item::{self, Consumable},
     math::*,
 };
 use enum_map::{Enum, EnumMap};
@@ -17,9 +17,12 @@ use std::{
     sync::Arc,
 };
 
-//////////////////////////
-// Shapeshifting system //
-//////////////////////////
+////////////
+// Active //
+////////////
+
+// note: it is pretty much possible to refactor any of that to be
+// some lua/gluon/whatever script.
 
 #[derive(Component)]
 #[storage(VecStorage)]
@@ -37,9 +40,27 @@ pub trait ShapeshifterForm: Sync + Send {
     fn on_end<'a>(&self, _: Entity, _: &LazyUpdate, _: ShapeshifterData<'a>) {}
 }
 
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct WeaponAttack {
+    pub pattern: Box<dyn AttackPattern>,
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct ConsumeAction {
+    pub consumable: Box<dyn Consumable + Send + Sync>,
+}
+
 /////////////////////////
 // Inventory and Items //
 /////////////////////////
+
+#[derive(Default, Debug, Component)]
+#[storage(VecStorage)]
+pub struct Hotbar {
+    pub content: [ItemBox; 4],
+}
 
 #[derive(Default, Debug, Component)]
 #[storage(VecStorage)]
@@ -185,14 +206,6 @@ pub struct WeaponProperties {
     pub damage: u32,
     pub accuracy: f32,
     pub passive_reloading: bool,
-}
-
-#[derive(Component)]
-#[storage(VecStorage)]
-pub struct WeaponAttack {
-    // note: it is pretty much possible to refactor attack pattern to be
-    // some lua/gluon script.
-    pub pattern: Box<dyn AttackPattern>,
 }
 
 /////////////
