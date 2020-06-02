@@ -59,7 +59,7 @@ pub struct Consumer {
 }
 pub struct ConsumeHandle {
     pub behaviour: &'static dyn ConsumeBehaviour,
-    pub acc: Option<f32>,
+    pub time: f32,
 }
 
 /////////////////////////

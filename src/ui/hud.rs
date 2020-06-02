@@ -78,7 +78,8 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                 .movable(false)
                 .collapsible(false)
                 .title_bar(false)
-                .focus_on_appearing(false), &ui => {
+                .focus_on_appearing(false)
+                .size([0.0, 0.0], Condition::Always), &ui => {
                     for (i, item_box) in hotbar.content.iter().enumerate() {
                         let [x, y] = ui.cursor_start_pos();
                         ui.set_cursor_pos([x + i as f32 * 70.0, y]);
@@ -91,6 +92,27 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Hud {
                         }
                         ui.set_cursor_pos([pos[0] + 17.0, 45.0]);
                         ui.text(&format!("[{}]", i + 1));
+                    }
+            });
+        }
+
+        if let Some((consumer, _)) = (&data.consumers, &data.player_tag).join().next() {
+            within_window!(Window::new(im_str!("Buffs"))
+                .position([ui.io().display_size[0] * 0.5, ui.io().display_size[1] - 70.0], Condition::Always)
+                .position_pivot([0.5, 1.0])
+                .resizable(false)
+                .draw_background(false)
+                .movable(false)
+                .collapsible(false)
+                .title_bar(false)
+                .scroll_bar(false)
+                .focus_on_appearing(false)
+                .size([0.0, 40.0], Condition::Always), &ui => {
+                    for handle in &consumer.handles {
+                        if let Some(icon) = handle.behaviour.icon(ctx.as_mut(), &mut data.assets) {
+                            Image::new(ctx.get_texture_id_for(&icon), [30.0, 30.0]).build(ui);
+                            ui.same_line(0.0);
+                        }
                     }
             });
         }

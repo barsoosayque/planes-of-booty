@@ -22,6 +22,21 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub struct ConsumablesSystem;
+impl<'a> System<'a> for ConsumablesSystem {
+    type SystemData = (Entities<'a>, Read<'a, DeltaTime>, Read<'a, LazyUpdate>, WriteStorage<'a, Consumer>);
+
+    fn run(&mut self, (entities, dt, update, mut consumers): Self::SystemData) {
+        let dt = dt.0.as_secs_f32();
+        for (e, consumer) in (&entities, &mut consumers).join() {
+            for handle in &mut consumer.handles {
+                handle.time += dt;
+            }
+            consumer.handles.retain(|handle| !handle.behaviour.update(dt, handle.time, e, &update));
+        }
+    }
+}
+
 pub struct ShapeshifterSystem<'a>(pub &'a mut ggez::Context);
 impl<'a> System<'a> for ShapeshifterSystem<'a> {
     type SystemData = (

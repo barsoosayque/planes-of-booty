@@ -144,6 +144,7 @@ pub struct UiData<'a> {
     pub weaponries: WriteStorage<'a, Weaponry>,
     pub hotbars: WriteStorage<'a, Hotbar>,
     pub hpools: ReadStorage<'a, HealthPool>,
+    pub consumers: ReadStorage<'a, Consumer>,
 
     pub consumables: ReadStorage<'a, Consumable>,
     pub wpn_props: ReadStorage<'a, WeaponProperties>,

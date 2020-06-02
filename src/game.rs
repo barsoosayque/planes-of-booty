@@ -31,6 +31,7 @@ impl Game {
         let imgui = ImGuiSystem::new(ctx);
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
+            .with(ConsumablesSystem, "consumables_system", &[])
             .with(InteractionSystem, "interaction_system", &[])
             .with(CameraSystem, "camera_system", &[])
             .with(ParticlesSystem, "particles_system", &[])

@@ -155,20 +155,25 @@ impl<'a> System<'a> for InputsSystem {
                                 hotbar.content[n].and_then(|i| consumables.get(i)),
                                 hotbar.content[n].and_then(|i| stackables.get_mut(i)),
                             ) {
-                                let consume_item = if let Some(stackable) = stackable {
-                                    if stackable.current > 1 {
-                                        stackable.current -= 1;
-                                        false
+                                // check if we already have this consumable
+                                if !consumer.handles.iter().any(|h| std::ptr::eq(h.behaviour, consumable.behaviour)) {
+                                    let consume_item = if let Some(stackable) = stackable {
+                                        if stackable.current > 1 {
+                                            stackable.current -= 1;
+                                            false
+                                        } else {
+                                            true
+                                        }
                                     } else {
                                         true
+                                    };
+                                    if consume_item {
+                                        to_destruct
+                                            .insert(hotbar.content[n].take().unwrap(), tag::PendingDestruction)
+                                            .unwrap();
                                     }
-                                } else {
-                                    true
-                                };
-                                if consume_item {
-                                    to_destruct.insert(hotbar.content[n].take().unwrap(), tag::PendingDestruction).unwrap();
+                                    consumer.handles.push(ConsumeHandle { behaviour: consumable.behaviour, time: 0.0 });
                                 }
-                                consumer.handles.push(ConsumeHandle { behaviour: consumable.behaviour, acc: None });
                             }
                         }
                     },

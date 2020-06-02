@@ -1,0 +1,14 @@
+components:
+    Sprite:
+        asset: { single: { image: "/sprites/item/orange.png" } }
+        size: { width: 50.0, height: 50.0 }
+    Consumable:
+        behaviour: { consumable_behaviour: "orange" }
+    Named:
+        name: "Orange"
+        description: "A key to healthy life."
+    Quality:
+        rarity: { rarity: "common" }
+    Stackable:
+        stack_size: 4
+        __default: true
