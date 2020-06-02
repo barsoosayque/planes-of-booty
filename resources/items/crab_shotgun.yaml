@@ -1,0 +1,14 @@
+# This is weapon for crab_jr, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: 
+            attack_pattern: "shotgun"
+            pellets: 2
+            recoil: 600.0
+    WeaponProperties:
+        damage: 30 
+        accuracy: 0.8
+        clip_size: 1
+        clip: 1
+        reloading_time: 6.0
+        __default: true

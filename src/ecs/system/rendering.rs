@@ -79,9 +79,14 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
         &mut self,
         (entities, mut assets, interaction, transforms, sprites, blinks, directionals): Self::SystemData,
     ) {
-        for (e, transform, sprite, directional_opt, blink_opt) in
-            (&entities, &transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join()
-        {
+        let mut stream =
+            (&entities, &transforms, &sprites, (&directionals).maybe(), (&blinks).maybe()).join().collect::<Vec<_>>();
+        stream.sort_unstable_by(|t1, t2| {
+            (t1.1.pos.y + t1.2.size.height * 0.5)
+                .partial_cmp(&(t2.1.pos.y + t2.2.size.height * 0.5))
+                .unwrap_or(std::cmp::Ordering::Less)
+        });
+        for (e, transform, sprite, directional_opt, blink_opt) in stream.into_iter() {
             let img = match &sprite.asset {
                 SpriteAsset::Single { value } => Some(value),
                 SpriteAsset::Directional { north, east, south, west } => {

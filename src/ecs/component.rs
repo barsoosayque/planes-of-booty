@@ -235,6 +235,7 @@ pub type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 pub struct Transform {
     pub pos: Vec2f,
     pub rotation: Angle2f,
+    pub mirror: bool
 }
 
 #[derive(Default, Debug, Component)]

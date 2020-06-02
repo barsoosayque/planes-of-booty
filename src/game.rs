@@ -207,7 +207,7 @@ impl EventHandler for Game {
                     let entity = self
                         .world
                         .create_entity_unchecked()
-                        .with(Transform { pos: def.pos, rotation: def.velocity.angle_from_x_axis() })
+                        .with(Transform { pos: def.pos, rotation: def.velocity.angle_from_x_axis(), ..Transform::default() })
                         .with(DistanceLimited { limit: def.distance })
                         .with(DistanceCounter::default())
                         .with(DamageDealer { damage: def.damage.0, damage_type: def.damage.1 })

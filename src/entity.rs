@@ -67,3 +67,57 @@ impl ShapeshifterForm for CrabShooterForm {
         update.remove::<component::ShootTarget>(e);
     }
 }
+
+struct CrabJrUnderwaterForm;
+impl ShapeshifterForm for CrabJrUnderwaterForm {
+    fn time(&self) -> f32 { 3.0 }
+
+    fn can_update(&self, e: Entity, world: &World) -> bool {
+        world.read_storage::<component::Target>().get(e).map(|t| t.target.is_some()).unwrap_or(true)
+    }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/crab-jr-underwater.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(100.0, 40.0),
+        });
+        update.insert(e, component::FollowTarget { keep_distance: 100.0, follow_distance: 400.0 });
+    }
+}
+
+struct CrabJrShooterForm;
+impl ShapeshifterForm for CrabJrShooterForm {
+    fn time(&self) -> f32 { 1.0 }
+
+    fn can_update(&self, e: Entity, world: &World) -> bool {
+        world.read_storage::<component::Target>().get(e).map(|t| t.target.is_some()).unwrap_or(true)
+    }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/crab-jr-shoot.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(100.0, 40.0),
+        });
+        update.remove::<component::FollowTarget>(e);
+    }
+}
+
+struct CrabJrShockedForm;
+impl ShapeshifterForm for CrabJrShockedForm {
+    fn time(&self) -> f32 { 4.0 }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/crab-jr-shock.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(100.0, 40.0),
+        });
+        update.insert(e, component::ShootTarget { radius: 400.0 });
+    }
+
+    fn on_end(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        update.remove::<component::ShootTarget>(e);
+    }
+}

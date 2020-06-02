@@ -214,6 +214,7 @@ impl AttackPattern for Cannon {
 
 pub struct Shotgun {
     pub pellets: u8,
+    pub recoil: f32
 }
 impl Shotgun {
     const ANGLE_LEFT_RAD: f32 = -0.392687;
@@ -225,6 +226,10 @@ impl AttackPattern for Shotgun {
     fn description(&self) -> &str { "Juicy multi-projectile shots." }
 
     fn attack(&self, data: &mut AttackPatternData) {
+        if let Some(body) = &mut data.shooter_body {
+            let recoil = data.prop.shooting_normal * -self.recoil;
+            body.apply_force(0, &Force::linear([recoil.x, recoil.y].into()), ForceType::VelocityChange, true);
+        }
         let (left, right) = (Angle2f::radians(Self::ANGLE_LEFT_RAD), Angle2f::radians(Self::ANGLE_RIGHT_RAD));
         let corrected = with_accuracy(data.prop.shooting_normal, data.prop.accuracy);
         for i in 0..self.pellets {
