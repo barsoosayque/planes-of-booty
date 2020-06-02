@@ -120,6 +120,7 @@ impl PhysicWorld {
 #[derive(Default, Debug)]
 pub struct Inputs {
     pub pressed_keys: HashSet<input::keyboard::KeyCode>,
+    pub clicked_keys: HashSet<input::keyboard::KeyCode>,
     pub mouse_clicked: HashSet<input::mouse::MouseButton>,
     pub mouse_pressed: HashSet<input::mouse::MouseButton>,
     pub mouse_pos: Point2f,
@@ -144,7 +145,7 @@ pub struct UiData<'a> {
     pub hotbars: WriteStorage<'a, Hotbar>,
     pub hpools: ReadStorage<'a, HealthPool>,
 
-    pub consumables: ReadStorage<'a, ConsumeAction>,
+    pub consumables: ReadStorage<'a, Consumable>,
     pub wpn_props: ReadStorage<'a, WeaponProperties>,
     pub wpn_attacks: ReadStorage<'a, WeaponAttack>,
     pub named: ReadStorage<'a, Named>,

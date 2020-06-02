@@ -27,13 +27,15 @@ pub struct ComponentDef {
 pub enum PartValue {
     Seq(Vec<PartValue>),
     Str(String),
-    Num(f32),
+    Numf(f32),
+    Numi(i32),
     Bool(bool),
     Image(String),
     Faction(String),
     CollisionGroup(String),
     Rarity(String),
     AttackPattern(String, Map<String, PartValue>),
+    ConsumableBehaviour(String, Map<String, PartValue>),
     ShapeshifterForms(Vec<PartValue>),
     Item(String),
     Range(Box<PartValue>, Box<PartValue>),
@@ -55,7 +57,8 @@ impl std::fmt::Display for PartValue {
                 vec.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(",")
             ),
             PartValue::Str(value) => write!(f, "\"{}\"", value),
-            PartValue::Num(value) => write!(f, "num_traits::cast::AsPrimitive::as_({}f32)", value),
+            PartValue::Numf(value) => write!(f, "{}f32", value),
+            PartValue::Numi(value) => write!(f, "{}", value),
             PartValue::Bool(value) => write!(f, "{}", value),
             PartValue::Image(path) => write!(f, "assets.get::<crate::assets::ImageAsset>(\"{}\", ctx).unwrap()", path),
             PartValue::Faction(faction) => write!(f, "component::FactionId::{}", faction.to_camel_case()),
@@ -65,17 +68,9 @@ impl std::fmt::Display for PartValue {
             },
             PartValue::ShapeshifterForms(..) => write!(f, "&SHAPESHIFTER_FORMS"),
             PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
-            PartValue::AttackPattern(pattern, fields) => {
-                if fields.is_empty() {
-                    write!(f, "Box::new(crate::attack::{})", pattern.to_camel_case())
-                } else {
-                    write!(
-                        f,
-                        "Box::new(crate::attack::{}{{{}}})",
-                        pattern.to_camel_case(),
-                        fields.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<String>>().join(",")
-                    )
-                }
+            PartValue::AttackPattern(pattern, ..) => write!(f, "&ATTACK_PATTERN_{}", pattern.to_shouty_snake_case()),
+            PartValue::ConsumableBehaviour(consumable, ..) => {
+                write!(f, "&CONSUMABLE_BEHAVIOUR_{}", consumable.to_shouty_snake_case())
             },
             PartValue::Range(start, end) => write!(f, "({}..={}).into()", start, end),
             PartValue::Directional { north, east, south, west } => write!(
@@ -105,6 +100,36 @@ impl PartValue {
 
     pub fn initialize(&self) -> Option<String> {
         match self {
+            PartValue::ConsumableBehaviour(consumable, fields) => {
+                let (var_name, struct_name) =
+                    (consumable.to_shouty_snake_case(), format!("crate::item::{}", consumable.to_camel_case()));
+                if fields.is_empty() {
+                    Some(format!("const CONSUMABLE_BEHAVIOUR_{}: {} = {};", var_name, struct_name, struct_name))
+                } else {
+                    Some(format!(
+                        "const CONSUMABLE_BEHAVIOUR_{}: {} = {}{{{}}};",
+                        var_name,
+                        struct_name,
+                        struct_name,
+                        fields.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<String>>().join(",")
+                    ))
+                }
+            },
+            PartValue::AttackPattern(pattern, fields) => {
+                let (var_name, struct_name) =
+                    (pattern.to_shouty_snake_case(), format!("crate::attack::{}", pattern.to_camel_case()));
+                if fields.is_empty() {
+                    Some(format!("const ATTACK_PATTERN_{}: {} = {};", var_name, struct_name, struct_name))
+                } else {
+                    Some(format!(
+                        "const ATTACK_PATTERN_{}: {} = {}{{{}}};",
+                        var_name,
+                        struct_name,
+                        struct_name,
+                        fields.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<String>>().join(",")
+                    ))
+                }
+            },
             PartValue::ShapeshifterForms(forms) => {
                 let (mut vars, mut lines): (Vec<_>, Vec<_>) = (vec![], vec![]);
                 for form in forms {
@@ -242,11 +267,11 @@ impl<'de> Visitor<'de> for PartValueVisitor {
 
     fn visit_bool<E: de::Error>(self, value: bool) -> Result<Self::Value, E> { Ok(PartValue::Bool(value)) }
 
-    fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> { Ok(PartValue::Num(value as f32)) }
+    fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> { Ok(PartValue::Numi(value as i32)) }
 
-    fn visit_i64<E: de::Error>(self, value: i64) -> Result<Self::Value, E> { Ok(PartValue::Num(value as f32)) }
+    fn visit_i64<E: de::Error>(self, value: i64) -> Result<Self::Value, E> { Ok(PartValue::Numi(value as i32)) }
 
-    fn visit_f64<E: de::Error>(self, value: f64) -> Result<Self::Value, E> { Ok(PartValue::Num(value as f32)) }
+    fn visit_f64<E: de::Error>(self, value: f64) -> Result<Self::Value, E> { Ok(PartValue::Numf(value as f32)) }
 
     fn visit_map<M: MapAccess<'de>>(self, mut access: M) -> Result<Self::Value, M::Error> {
         let mut buffer = Map::<String, PartValue>::new();
@@ -275,13 +300,13 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             })
         } else if let Some(value) = buffer.remove("single") {
             Ok(PartValue::Single { value: Box::new(value) })
-        } else if let (Some(PartValue::Num(width)), Some(PartValue::Num(height))) =
+        } else if let (Some(PartValue::Numf(width)), Some(PartValue::Numf(height))) =
             (buffer.remove("width"), buffer.remove("height"))
         {
             Ok(PartValue::Size { width, height })
-        } else if let (Some(PartValue::Num(x)), Some(PartValue::Num(y))) = (buffer.remove("x"), buffer.remove("y")) {
+        } else if let (Some(PartValue::Numf(x)), Some(PartValue::Numf(y))) = (buffer.remove("x"), buffer.remove("y")) {
             Ok(PartValue::Vec { x, y })
-        } else if let (Some(PartValue::Num(mass)), Some(PartValue::Str(status))) =
+        } else if let (Some(PartValue::Numf(mass)), Some(PartValue::Str(status))) =
             (buffer.remove("mass"), buffer.remove("status"))
         {
             Ok(PartValue::Body { mass, status })
@@ -303,6 +328,8 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             Ok(PartValue::Collide { sensor, collision_membership, shape: Box::new(shape) })
         } else if let Some(PartValue::Str(pattern)) = buffer.remove("attack_pattern") {
             Ok(PartValue::AttackPattern(pattern, buffer))
+        } else if let Some(PartValue::Str(consumable)) = buffer.remove("consumable_behaviour") {
+            Ok(PartValue::ConsumableBehaviour(consumable, buffer))
         } else if let (Some(start), Some(end)) = (buffer.remove("start"), buffer.remove("end")) {
             Ok(PartValue::Range(Box::new(start), Box::new(end)))
         } else if let Some(PartValue::Seq(forms)) = buffer.remove("shapeshifter_forms") {

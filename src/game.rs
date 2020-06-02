@@ -97,7 +97,8 @@ impl Game {
         world.register::<Projectile>();
         world.register::<SharedParticleDef>();
         world.register::<ParticleProperties>();
-        world.register::<ConsumeAction>();
+        world.register::<Consumable>();
+        world.register::<Consumer>();
         dispatcher.setup(&mut world);
 
         let mut game = Self { world, dispatcher, imgui };
@@ -108,6 +109,7 @@ impl Game {
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        // TODO: Move all of this to some system
         {
             // update delta time
             let mut delta = self.world.write_resource::<DeltaTime>();
@@ -118,6 +120,7 @@ impl EventHandler for Game {
             // update inputs
             use ggez::input::{keyboard, mouse};
             let mut inputs = self.world.write_resource::<Inputs>();
+            inputs.clicked_keys = inputs.pressed_keys.difference(&keyboard::pressed_keys(ctx)).copied().collect();
             inputs.pressed_keys = keyboard::pressed_keys(ctx).to_owned();
             inputs.mouse_pos = Point2f::from(mouse::position(ctx));
             let new_press: std::collections::HashSet<mouse::MouseButton> =
@@ -126,7 +129,7 @@ impl EventHandler for Game {
                     .cloned()
                     .filter(|btn| mouse::button_pressed(ctx, *btn))
                     .collect();
-            inputs.mouse_clicked = inputs.mouse_pressed.difference(&new_press).cloned().collect();
+            inputs.mouse_clicked = inputs.mouse_pressed.difference(&new_press).copied().collect();
             inputs.mouse_pressed = new_press;
         }
 

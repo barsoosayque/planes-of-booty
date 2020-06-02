@@ -18,7 +18,6 @@ euclid = { version = "0.20.13", features = ["mint"] }
 anyhow = "1.0.31"
 log = "0.4.8"
 fern = { version = "0.6.0", features = ["colored"] }
-num-traits = "0.2.11"
 rand = "0.7.3"
 enum-map = "0.6.2"
 itertools = "0.9.0"

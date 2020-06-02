@@ -101,7 +101,7 @@ macro_rules! item_tooltip {
         if let Some(consumable) = $data.consumables.get($item) {
             $ui.separator();
             $ui.text_colored([0.81, 0.48, 0.72, 1.0], im_str!("It's a consumable:"));
-            $ui.text(&ImString::new(consumable.consumable.description()));
+            $ui.text(&ImString::new(consumable.behaviour.description()));
         }
         if let Some(quality) = $data.qualities.get($item) {
             $ui.separator();

@@ -4,14 +4,16 @@ use crate::ecs::{component, resource, tag};
 // see `build/build.rs` for code generation
 include!(concat!(env!("OUT_DIR"), "/generated/item.rs"));
 
-pub trait Consumable {
+pub trait ConsumeBehaviour: Sync + Send {
     fn description(&self) -> &str;
-    fn consume(&self);
+    fn update(&self, dt: f32, time: f32) -> bool;
 }
 
-struct Healing;
-impl Consumable for Healing {
+struct Orange;
+impl ConsumeBehaviour for Orange {
     fn description(&self) -> &str { "Heals for 50 points in 3 seconds." }
 
-    fn consume(&self) {}
+    fn update(&self, dt: f32, time: f32) -> bool {
+        true
+    }
 }

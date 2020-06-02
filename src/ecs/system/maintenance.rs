@@ -96,38 +96,85 @@ impl<'a> System<'a> for InputsSystem {
         Read<'a, Inputs>,
         Read<'a, Camera>,
         ReadStorage<'a, tag::Player>,
+        WriteStorage<'a, tag::PendingDestruction>,
+        WriteStorage<'a, Hotbar>,
+        WriteStorage<'a, Consumer>,
         WriteStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
+        ReadStorage<'a, Consumable>,
+        WriteStorage<'a, Stackable>,
     );
 
     fn run(
         &mut self,
-        (entities, transforms, mut movements, mut ui, interaction, inputs, camera, tag, mut weaponries, mut wpn_props): Self::SystemData,
+        (
+            entities,
+            transforms,
+            mut movements,
+            mut ui,
+            interaction,
+            inputs,
+            camera,
+            tag,
+            mut to_destruct,
+            mut hotbars,
+            mut consumers,
+            mut weaponries,
+            mut wpn_props,
+            consumables,
+            mut stackables,
+        ): Self::SystemData,
     ) {
         for (e, movement, _) in (&entities, &mut movements, &tag).join() {
             let mut direction = Vec2f::zero();
-            if inputs.pressed_keys.contains(&KeyCode::W) {
-                direction.y -= 1.0;
-            };
-            if inputs.pressed_keys.contains(&KeyCode::A) {
-                direction.x -= 1.0;
-            };
-            if inputs.pressed_keys.contains(&KeyCode::S) {
-                direction.y += 1.0;
-            };
-            if inputs.pressed_keys.contains(&KeyCode::D) {
-                direction.x += 1.0;
-            };
+            for key in &inputs.pressed_keys {
+                match key {
+                    KeyCode::W => direction.y -= 1.0,
+                    KeyCode::A => direction.x -= 1.0,
+                    KeyCode::S => direction.y += 1.0,
+                    KeyCode::D => direction.x += 1.0,
+                    _ => (),
+                }
+            }
             movement.target_acceleration_normal = direction.try_normalize().unwrap_or_default();
 
-            if inputs.pressed_keys.contains(&KeyCode::I) {
-                ui.inventory_window.show_inventories_for.insert(e);
-            };
-            if inputs.pressed_keys.contains(&KeyCode::E) {
-                if let Some(near_inventory_e) = interaction.near_inventory {
-                    ui.inventory_window.show_inventories_for.insert(near_inventory_e);
+            for key in &inputs.clicked_keys {
+                match key {
+                    KeyCode::I => {
+                        ui.inventory_window.show_inventories_for.insert(e);
+                    },
+                    KeyCode::E => {
+                        if let Some(near_inventory_e) = interaction.near_inventory {
+                            ui.inventory_window.show_inventories_for.insert(near_inventory_e);
+                        }
+                    },
+                    KeyCode::Key1 | KeyCode::Key2 | KeyCode::Key3 | KeyCode::Key4 => {
+                        let n = *key as usize - KeyCode::Key1 as usize;
+                        if let (Some(consumer), Some(hotbar)) = (consumers.get_mut(e), hotbars.get_mut(e)) {
+                            if let (Some(consumable), stackable) = (
+                                hotbar.content[n].and_then(|i| consumables.get(i)),
+                                hotbar.content[n].and_then(|i| stackables.get_mut(i)),
+                            ) {
+                                let consume_item = if let Some(stackable) = stackable {
+                                    if stackable.current > 1 {
+                                        stackable.current -= 1;
+                                        false
+                                    } else {
+                                        true
+                                    }
+                                } else {
+                                    true
+                                };
+                                if consume_item {
+                                    to_destruct.insert(hotbar.content[n].take().unwrap(), tag::PendingDestruction).unwrap();
+                                }
+                                consumer.handles.push(ConsumeHandle { behaviour: consumable.behaviour, acc: None });
+                            }
+                        }
+                    },
+                    _ => (),
                 }
-            };
+            }
         }
         for (transform, weaponry, _) in (&transforms, &mut weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
@@ -222,8 +269,7 @@ impl<'a> System<'a> for DamageSystem {
 
 pub struct DestructionSystem;
 impl<'a> System<'a> for DestructionSystem {
-    type SystemData =
-        (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>);
+    type SystemData = (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>);
 
     fn run(&mut self, (entities, to_destruct): Self::SystemData) {
         for (e, _) in (&entities, &to_destruct).join() {

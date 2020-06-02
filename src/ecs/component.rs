@@ -1,7 +1,7 @@
 use crate::{
     assets::*,
     attack::{AttackPattern, ProjectileDef},
-    item::{self, Consumable},
+    item::{self, ConsumeBehaviour},
     math::*,
 };
 use enum_map::{Enum, EnumMap};
@@ -43,13 +43,23 @@ pub trait ShapeshifterForm: Sync + Send {
 #[derive(Component)]
 #[storage(VecStorage)]
 pub struct WeaponAttack {
-    pub pattern: Box<dyn AttackPattern>,
+    pub pattern: &'static dyn AttackPattern,
 }
 
 #[derive(Component)]
 #[storage(VecStorage)]
-pub struct ConsumeAction {
-    pub consumable: Box<dyn Consumable + Send + Sync>,
+pub struct Consumable {
+    pub behaviour: &'static dyn ConsumeBehaviour,
+}
+
+#[derive(Default, Component)]
+#[storage(VecStorage)]
+pub struct Consumer {
+    pub handles: Vec<ConsumeHandle>,
+}
+pub struct ConsumeHandle {
+    pub behaviour: &'static dyn ConsumeBehaviour,
+    pub acc: Option<f32>,
 }
 
 /////////////////////////
