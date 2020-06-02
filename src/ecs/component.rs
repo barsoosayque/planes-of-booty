@@ -26,15 +26,15 @@ use std::{
 pub struct Shapeshifter {
     pub current: usize,
     pub time: f32,
-    pub forms: &'static[&'static dyn ShapeshifterForm]
+    pub forms: &'static [&'static dyn ShapeshifterForm],
 }
 
-pub type ShapeshifterFormData<'a> = (&'a mut AssetManager, &'a mut ggez::Context);
+pub type ShapeshifterData<'a> = (&'a mut ggez::Context, &'a mut AssetManager);
 pub trait ShapeshifterForm: Sync + Send {
     fn time(&self) -> f32;
-    fn can_update<'a>(&self, e: Entity, world: &World) -> bool;
-    fn on_begin<'a>(&self, e: Entity, update: &LazyUpdate, data: ShapeshifterFormData<'a>);
-    fn on_end<'a>(&self, e: Entity, update: &LazyUpdate, data: ShapeshifterFormData<'a>);
+    fn can_update(&self, _: Entity, _: &World) -> bool { true }
+    fn on_begin<'a>(&self, _: Entity, _: &LazyUpdate, _: ShapeshifterData<'a>) {}
+    fn on_end<'a>(&self, _: Entity, _: &LazyUpdate, _: ShapeshifterData<'a>) {}
 }
 
 /////////////////////////
@@ -200,7 +200,7 @@ pub struct WeaponAttack {
 /////////////
 
 #[derive(Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct Physic {
     pub body: DefaultBodyHandle,
     pub collide: (DefaultColliderHandle, CollideShapeHandle),
@@ -233,6 +233,12 @@ pub enum CollisionGroup {
     Projectiles = 3,
     Props = 4,
 }
+pub const NO_COLLISION: [usize; 4] = [
+    CollisionGroup::Players as usize,
+    CollisionGroup::Enemies as usize,
+    CollisionGroup::Projectiles as usize,
+    CollisionGroup::Props as usize,
+];
 
 //////////////////////
 // Targeting and AI //
@@ -245,7 +251,7 @@ pub struct Target {
 }
 
 #[derive(Default, Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct FollowTarget {
     pub keep_distance: f32,
     pub follow_distance: f32,
@@ -259,7 +265,7 @@ pub struct SearchForTarget {
 }
 
 #[derive(Default, Component)]
-#[storage(VecStorage)]
+#[storage(FlaggedStorage)]
 pub struct ShootTarget {
     pub radius: f32,
 }
@@ -270,7 +276,7 @@ pub struct Faction {
     pub id: FactionId,
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum FactionId {
     Good,
     Pirates,

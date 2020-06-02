@@ -45,7 +45,7 @@ impl<'a> System<'a> for RandomizedWeaponsSystem {
     type SystemData = (WriteStorage<'a, RandomizedWeaponProperties>, WriteStorage<'a, WeaponProperties>);
 
     fn run(&mut self, (mut randoms, mut props): Self::SystemData) {
-        read_event!(Inserted; randoms => self.reader_id.as_mut().unwrap() => self.inserted);
+        read_event!(randoms, self.reader_id.as_mut().unwrap(); Inserted => self.inserted);
 
         for (random, prop, _) in (&randoms, &mut props, &self.inserted).join() {
             let mut rng = thread_rng();
@@ -223,14 +223,10 @@ impl<'a> System<'a> for DamageSystem {
 pub struct DestructionSystem;
 impl<'a> System<'a> for DestructionSystem {
     type SystemData =
-        (Entities<'a>, WriteExpect<'a, PhysicWorld>, ReadStorage<'a, tag::PendingDestruction>, ReadStorage<'a, Physic>);
+        (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>);
 
-    fn run(&mut self, (entities, mut pworld, to_destruct, physics): Self::SystemData) {
-        for (e, physics_opt, _) in (&entities, (&physics).maybe(), &to_destruct).join() {
-            if let Some(physic) = physics_opt {
-                pworld.colliders.remove(physic.collide.0);
-                pworld.bodies.remove(physic.body);
-            }
+    fn run(&mut self, (entities, to_destruct): Self::SystemData) {
+        for (e, _) in (&entities, &to_destruct).join() {
             entities.delete(e).unwrap();
         }
     }

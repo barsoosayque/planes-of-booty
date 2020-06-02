@@ -37,8 +37,8 @@ impl<'a> System<'a> for ShapeshifterSystem<'a> {
         for (e, shapeshifter) in (&entities, &mut shapeshifters).join() {
             if shapeshifter.time >= shapeshifter.forms[shapeshifter.current].time() {
                 let next = (shapeshifter.current + 1) % shapeshifter.forms.len();
-                shapeshifter.forms[shapeshifter.current].on_end(e, update.deref(), (&mut assets, &mut self.0));
-                shapeshifter.forms[next].on_begin(e, update.deref(), (&mut assets, &mut self.0));
+                shapeshifter.forms[shapeshifter.current].on_end(e, update.deref(), (&mut self.0, &mut assets));
+                shapeshifter.forms[next].on_begin(e, update.deref(), (&mut self.0, &mut assets));
                 shapeshifter.current = next;
                 shapeshifter.time = 0.0;
             }
@@ -247,12 +247,27 @@ impl<'a> System<'a> for ProjectileSystem {
     }
 }
 
-pub struct PhysicSystem;
+#[derive(Default)]
+pub struct PhysicSystem {
+    reader_id: Option<ReaderId<ComponentEvent>>,
+    removed: BitSet,
+}
 impl<'a> System<'a> for PhysicSystem {
-    type SystemData =
-        (WriteStorage<'a, Transform>, WriteStorage<'a, Movement>, Read<'a, DeltaTime>, WriteExpect<'a, PhysicWorld>);
+    type SystemData = (
+        WriteStorage<'a, Transform>,
+        WriteStorage<'a, Movement>,
+        ReadStorage<'a, Physic>,
+        Read<'a, DeltaTime>,
+        WriteExpect<'a, PhysicWorld>,
+    );
 
-    fn run(&mut self, (mut transforms, mut movements, delta, mut world): Self::SystemData) {
+    fn run(&mut self, (mut transforms, mut movements, physics, delta, mut world): Self::SystemData) {
+        read_event!(physics, self.reader_id.as_mut().unwrap(); Removed => self.removed);
+        for (physic, _) in (&physics, &self.removed).join() {
+            world.colliders.remove(physic.collide.0);
+            world.bodies.remove(physic.body);
+        }
+
         // set data before simulation
         for (e, body) in world.bodies_iter_mut() {
             if let Some(movement) = movements.get_mut(e) {
@@ -299,6 +314,11 @@ impl<'a> System<'a> for PhysicSystem {
             }
         }
     }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(world.write_storage::<Physic>().register_reader());
+    }
 }
 
 #[derive(Default)]
@@ -310,15 +330,7 @@ impl<'a> System<'a> for PhysicTransformSyncSystem {
     type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, Physic>, WriteExpect<'a, PhysicWorld>);
 
     fn run(&mut self, (transforms, physics, mut world): Self::SystemData) {
-        self.modified.clear();
-        for event in transforms.channel().read(self.reader_id.as_mut().unwrap()) {
-            match event {
-                ComponentEvent::Modified(id) => {
-                    self.modified.add(*id);
-                },
-                _ => (),
-            };
-        }
+        read_event!(transforms, self.reader_id.as_mut().unwrap(); Modified => self.modified);
 
         for (transform, physic, _) in (&transforms, &physics, &self.modified).join() {
             log::debug!("Manually changing transform of body");
@@ -334,7 +346,10 @@ impl<'a> System<'a> for PhysicTransformSyncSystem {
 }
 
 #[derive(Default)]
-pub struct ShootTargetSystem;
+pub struct ShootTargetSystem {
+    reader_id: Option<ReaderId<ComponentEvent>>,
+    removed: BitSet,
+}
 impl<'a> System<'a> for ShootTargetSystem {
     type SystemData = (
         WriteStorage<'a, WeaponProperties>,
@@ -344,8 +359,8 @@ impl<'a> System<'a> for ShootTargetSystem {
         ReadStorage<'a, Transform>,
     );
 
-    fn run(&mut self, (mut wpn_props, weaponry, targets, shoot_targets, transforms): Self::SystemData) {
-        for (transform, weaponry, target, shoot_target) in (&transforms, &weaponry, &targets, &shoot_targets).join() {
+    fn run(&mut self, (mut wpn_props, weaponries, targets, shoot_targets, transforms): Self::SystemData) {
+        for (transform, weaponry, target, shoot_target) in (&transforms, &weaponries, &targets, &shoot_targets).join() {
             if let (Some(target), Some(wpn_prop)) = (target.target, weaponry.primary.and_then(|w| wpn_props.get_mut(w)))
             {
                 let target_transform = transforms.get(target).unwrap();
@@ -358,6 +373,18 @@ impl<'a> System<'a> for ShootTargetSystem {
                 }
             }
         }
+
+        read_event!(shoot_targets, self.reader_id.as_mut().unwrap(); Removed => self.removed);
+        for (weaponry, _) in (&weaponries, &self.removed).join() {
+            if let Some(wpn_prop) = weaponry.primary.and_then(|w| wpn_props.get_mut(w)) {
+                wpn_prop.is_shooting = false;
+            }
+        }
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(world.write_storage::<ShootTarget>().register_reader());
     }
 }
 
@@ -390,7 +417,11 @@ impl<'a> System<'a> for SearchForTargetSystem {
     }
 }
 
-pub struct FollowTargetSystem;
+#[derive(Default)]
+pub struct FollowTargetSystem {
+    reader_id: Option<ReaderId<ComponentEvent>>,
+    removed: BitSet,
+}
 impl<'a> System<'a> for FollowTargetSystem {
     type SystemData = (
         Entities<'a>,
@@ -429,6 +460,17 @@ impl<'a> System<'a> for FollowTargetSystem {
                 }
             }
         }
+
+        read_event!(follows, self.reader_id.as_mut().unwrap(); Removed => self.removed);
+        for (movement, _) in (&mut movements, &self.removed).join() {
+            movement.target_acceleration_normal.x = 0.0;
+            movement.target_acceleration_normal.y = 0.0;
+        }
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(world.write_storage::<FollowTarget>().register_reader());
     }
 }
 
@@ -571,7 +613,7 @@ impl<'a> System<'a> for DirectionalCollidersSystem {
     type SystemData = (ReadStorage<'a, Directional>, WriteStorage<'a, Physic>, WriteExpect<'a, PhysicWorld>);
 
     fn run(&mut self, (directionals, mut physics, mut world): Self::SystemData) {
-        read_event!(Modified; directionals => self.reader_id.as_mut().unwrap() => self.modified);
+        read_event!(directionals, self.reader_id.as_mut().unwrap(); Modified => self.modified);
 
         for (direction, physic, _) in (&directionals, &mut physics, &self.modified).join() {
             if let CollideShapeHandle::Directional { north, east, south, west } = &physic.collide.1 {
@@ -608,7 +650,7 @@ impl<'a> System<'a> for SpriteDamageBlinkSystem {
             blinks.remove(e);
         }
 
-        read_event!(Modified; hpools => self.reader_id.as_mut().unwrap() => self.modified);
+        read_event!(hpools, self.reader_id.as_mut().unwrap(); Modified => self.modified);
 
         for (e, _) in (&entities, &self.modified).join() {
             blinks.insert(e, SpriteBlink { frames_left: 4 }).unwrap();

@@ -1,0 +1,12 @@
+# This is weapon for crabster, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: { attack_pattern: "slingshot" }
+    WeaponProperties:
+        damage: 5
+        accuracy: 0.95
+        clip_size: 5
+        clip: 5
+        reloading_time: 1.0
+        cooldown_time: 0.3
+        __default: true

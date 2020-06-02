@@ -36,13 +36,13 @@ impl Game {
             .with(ParticlesSystem, "particles_system", &[])
             .with(SpriteDamageBlinkSystem::default(), "sprite_damage_blink_system", &[])
             .with(SearchForTargetSystem, "search_for_target_system", &[])
-            .with(FollowTargetSystem, "follow_target_system", &["search_for_target_system"])
-            .with(ShootTargetSystem, "shoot_target_system", &["search_for_target_system"])
+            .with(FollowTargetSystem::default(), "follow_target_system", &["search_for_target_system"])
+            .with(ShootTargetSystem::default(), "shoot_target_system", &["search_for_target_system"])
             .with(InputsSystem, "inputs_system", &[])
             .with(DirectionalSystem, "directional_system", &[])
             .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
-            .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
+            .with(PhysicSystem::default(), "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(ContainerSinkSystem, "container_sink_system", &[])
@@ -140,6 +140,7 @@ impl EventHandler for Game {
         self.world.write_resource::<Inputs>().mouse_scroll = 0.0;
 
         // Systems can spawn new stuff using SpawnQueue resource
+        // TODO: make this LazyUpdate system
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
             let mut assets = self.world.write_resource::<AssetManager>();
             match item {

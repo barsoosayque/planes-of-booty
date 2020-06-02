@@ -1,4 +1,4 @@
-use heck::CamelCase;
+use heck::{CamelCase, ShoutySnakeCase};
 use serde::{
     de::{self, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer,
@@ -12,31 +12,9 @@ pub struct EntityDef {
     pub name: String,
     pub components: Map<String, ComponentDef>,
     #[serde(default)]
-    pub shapeshifter_forms: Vec<ShapeshifterFormDef>,
-    #[serde(default)]
     pub shared_components: Map<String, ComponentDef>,
     #[serde(default)]
     pub tags: Vec<String>,
-}
-
-#[derive(Deserialize, Default)]
-pub struct ShapeshifterFormDef {
-    pub form: String,
-    pub time: f32,
-    #[serde(default)]
-    pub conditions: Map<String, Map<String, Condition>>,
-    pub components: Map<String, ComponentDef>,
-}
-
-pub enum Condition {
-    Method(String)
-}
-impl std::fmt::Display for Condition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Method(m) => write!(f, ".{}()", m)
-        }
-    }
 }
 
 #[derive(Default)]
@@ -56,6 +34,7 @@ pub enum PartValue {
     CollisionGroup(String),
     Rarity(String),
     AttackPattern(String, Map<String, PartValue>),
+    ShapeshifterForms(Vec<PartValue>),
     Item(String),
     Range(Box<PartValue>, Box<PartValue>),
     Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
@@ -84,6 +63,7 @@ impl std::fmt::Display for PartValue {
             PartValue::CollisionGroup(group) => {
                 write!(f, "(component::CollisionGroup::{} as usize)", group.to_camel_case())
             },
+            PartValue::ShapeshifterForms(..) => write!(f, "&SHAPESHIFTER_FORMS"),
             PartValue::Rarity(rarity) => write!(f, "component::Rarity::{}", rarity.to_camel_case()),
             PartValue::AttackPattern(pattern, fields) => {
                 if fields.is_empty() {
@@ -125,6 +105,22 @@ impl PartValue {
 
     pub fn initialize(&self) -> Option<String> {
         match self {
+            PartValue::ShapeshifterForms(forms) => {
+                let (mut vars, mut lines): (Vec<_>, Vec<_>) = (vec![], vec![]);
+                for form in forms {
+                    if let PartValue::Str(struct_name) = form {
+                        let var_name = struct_name.to_shouty_snake_case();
+                        lines.push(format!("const {}: {} = {};", var_name, struct_name, struct_name));
+                        vars.push(format!("&{}", var_name));
+                    }
+                }
+                Some(format!(
+                    "{}\nconst SHAPESHIFTER_FORMS: [&'static dyn component::ShapeshifterForm; {}] = [{}];",
+                    lines.join("\n"),
+                    vars.len(),
+                    vars.join(",")
+                ))
+            },
             PartValue::Body { mass, status } => Some(format!(
                 "let body = world.write_resource::<resource::PhysicWorld>()\
                     .bodies.insert(nphysics2d::object::RigidBodyDesc::new()\
@@ -182,6 +178,10 @@ impl PartValue {
 
     pub fn finalize(&self) -> Option<String> {
         match self {
+            PartValue::ShapeshifterForms(..) => Some(
+                "SHAPESHIFTER_FORMS[0].on_begin(entity, &world.read_resource::<specs::LazyUpdate>(), (ctx, assets));"
+                    .into(),
+            ),
             PartValue::Body { .. } => Some(
                 "world.write_resource::<resource::PhysicWorld>().bodies.rigid_body_mut(body).unwrap()\
                     .set_user_data(Some(Box::new(entity)));"
@@ -193,24 +193,6 @@ impl PartValue {
                     .into(),
             ),
             _ => None,
-        }
-    }
-}
-
-struct ConditionVisitor;
-impl<'de> Visitor<'de> for ConditionVisitor {
-    type Value = Condition;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result { formatter.write_str("a map") }
-
-    fn visit_map<M: MapAccess<'de>>(self, mut access: M) -> Result<Self::Value, M::Error> {
-        if let Some((key, value)) = access.next_entry::<String, String>()? {
-            match key.as_ref() {
-                "method" => Ok(Condition::Method(value)),
-                _ => Err(de::Error::custom("unknown condition"))
-            }
-        } else {
-            Err(de::Error::custom("empty map"))
         }
     }
 }
@@ -323,15 +305,11 @@ impl<'de> Visitor<'de> for PartValueVisitor {
             Ok(PartValue::AttackPattern(pattern, buffer))
         } else if let (Some(start), Some(end)) = (buffer.remove("start"), buffer.remove("end")) {
             Ok(PartValue::Range(Box::new(start), Box::new(end)))
+        } else if let Some(PartValue::Seq(forms)) = buffer.remove("shapeshifter_forms") {
+            Ok(PartValue::ShapeshifterForms(forms))
         } else {
             Err(de::Error::custom(format!("No special fields defined. Here is buffer: {:?}", buffer)))
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for Condition {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_map(ConditionVisitor)
     }
 }
 

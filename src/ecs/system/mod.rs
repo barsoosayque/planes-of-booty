@@ -69,13 +69,13 @@ pub fn render_polygon(ctx: &mut ggez::Context, points: &[Point2f], color: u32) {
 
 #[macro_export]
 macro_rules! read_event {
-    ($event:ident; $storage:expr => $reader:expr => $bitset:expr) => {
-        $bitset.clear();
+    ($storage:expr, $reader:expr; $($event:ident => $bitset:expr),*) => {
+        $(
+            $bitset.clear();
+        )*
         for event in $storage.channel().read($reader) {
             match event {
-                ComponentEvent::$event(id) => {
-                    $bitset.add(*id);
-                },
+                $( ComponentEvent::$event(id) => { $bitset.add(*id); } )*
                 _ => (),
             };
         }

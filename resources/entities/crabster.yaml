@@ -1,0 +1,47 @@
+components:
+    Shapeshifter:
+        forms: { shapeshifter_forms: ["CrabUnderwaterForm", "CrabShooterForm"] }
+        current: 0
+        time : 0.0
+    Sprite:
+        asset: { single: { image: "/sprites/entity/crab-underwater.png" } }
+        size: { width: 40.0, height: 80.0 }
+    Physic:
+        body: 
+            status: "dynamic"
+            mass: 5.0
+        collide:
+            collision_membership: [ { collision_group: "enemies" } ]
+            sensor: false
+            shape:
+                single:
+                    pos: { x: -22.0, y: -2.0 }
+                    size: { width: 50.0, height: 22.0 }
+    HealthPool:
+        max_hp: 80
+        hp: 80
+    Movement:
+        max_velocity: 100.0
+        acceleration_flat: 40.0
+        steering_difficulty: 0.9
+        __default: true
+    SearchForTarget:
+        from_factions: [ { faction: "good" } ]
+        radius: 200.0
+    FollowTarget:
+        keep_distance: 50.0
+        follow_distance: 500.0
+    Weaponry:
+        primary: { item: "crab_revolver" }
+        __default: true
+    Faction:
+        id: { faction: "pirates" }
+    Target: { __default: true }
+    Transform: { __default: true }
+    DamageReciever: { __default: true }
+shared_components:
+    DropTable:
+        drop_chance: 0.5
+        any_common: 3
+        any_legendary: 1
+        __default: true
