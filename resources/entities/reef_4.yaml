@@ -1,0 +1,17 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/entity/reef_4.png" }
+        size: { width: 50.0, height: 50.0 }
+    Physic:
+        body: 
+            status: "static"
+            mass: 100.0
+        collide:
+            collision_membership: [ { collision_group: "props" } ]
+            sensor: false
+            shape:
+                single:
+                    pos: { x: -17.0, y: 8.0 }
+                    size: { width: 30.0, height: 12.0 }
+    Transform: { __default: true }
