@@ -12,6 +12,7 @@ components:
         pattern: 
             attack_pattern: "shotgun"
             pellets: 8
+            recoil: 10.0
     RandomizedWeaponProperties:
         accuracy: { start: 0.8, end: 1.0 }
         damage: { start: 4, end: 6 }

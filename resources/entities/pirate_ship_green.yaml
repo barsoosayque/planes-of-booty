@@ -37,9 +37,14 @@ components:
     SearchForTarget:
         from_factions: [ { faction: "good" } ]
         radius: 300.0
+    ShootTarget: 
+        radius: 200.0
     FollowTarget:
         keep_distance: 150.0
         follow_distance: 500.0
+    Weaponry:
+        primary: { item: "pirate_ram" }
+        __default: true
     Faction:
         id: { faction: "pirates" }
     Target: { __default: true }

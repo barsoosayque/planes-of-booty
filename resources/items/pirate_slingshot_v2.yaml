@@ -1,0 +1,12 @@
+# This is weapon for pirate_ship_blue, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: { attack_pattern: "slingshot" }
+    WeaponProperties:
+        accuracy: 0.95
+        damage: 4
+        clip_size: 6
+        clip: 6
+        cooldown_time: 0.6
+        reloading_time: 2.0
+        __default: true

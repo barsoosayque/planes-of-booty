@@ -4,16 +4,18 @@ components:
             single: { image: "/sprites/item/ram.png" }
         size: { width: 50.0, height: 50.0 }
     Named:
-        name: "Battering ram"
-        description: "Rules of nature."
+        name: "Heavens Drill"
+        description: "Believe in the you who believes in yourself."
     Quality:
         rarity: { rarity: "rare" }
     WeaponAttack:
-        pattern: { attack_pattern: "ram" }
+        pattern: 
+            attack_pattern: "ram"
+            power: 4000.0
     RandomizedWeaponProperties:
         clip_size: { start: 2, end: 3 }
         cooldown_time: { start: 0.2, end: 0.5 }
-        reloading_time: { start: 4, end: 8 }
+        reloading_time: { start: 4.0, end: 8.0 }
         __default: true
     WeaponProperties:
         accuracy: 1.0

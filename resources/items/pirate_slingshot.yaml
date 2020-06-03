@@ -1,0 +1,12 @@
+# This is weapon for pirate_raft, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: { attack_pattern: "slingshot" }
+    WeaponProperties:
+        accuracy: 0.95
+        damage: 3
+        clip_size: 3
+        clip: 3
+        cooldown_time: 1.0
+        reloading_time: 2.0
+        __default: true

@@ -35,12 +35,14 @@ components:
         max_hp: 300
         hp: 300
     Weaponry: 
-        primary: { item: "ram" }
+        # primary: { item: "ram" }
         __default: true
     Faction:
         id: { faction: "good" }
     DamageReciever: { __default: true }
+    Consumer: { __default: true }
     Inventory: { __default: true }
+    Hotbar: { __default: true }
     Transform: { __default: true }
     Directional: { __default: true }
 tags: ["Player"]

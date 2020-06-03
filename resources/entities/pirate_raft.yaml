@@ -31,7 +31,7 @@ components:
         keep_distance: 80.0
         follow_distance: 500.0
     Weaponry:
-        primary: { item: "slingshot" }
+        primary: { item: "pirate_slingshot" }
         __default: true
     Faction:
         id: { faction: "pirates" }
