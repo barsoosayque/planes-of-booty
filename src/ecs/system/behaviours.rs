@@ -59,9 +59,10 @@ impl<'a> System<'a> for ShapeshifterSystem<'a> {
             }
             update.exec(move |world| {
                 let mut shapeshifters = world.write_storage::<Shapeshifter>();
-                let mut shapeshifter = shapeshifters.get_mut(e).unwrap();
-                if shapeshifter.forms[shapeshifter.current].can_update(e, &world) {
-                    shapeshifter.time += dt;
+                if let Some(mut shapeshifter) = shapeshifters.get_mut(e) {
+                    if shapeshifter.forms[shapeshifter.current].can_update(e, &world) {
+                        shapeshifter.time += dt;
+                    }
                 }
             });
         }
@@ -571,8 +572,10 @@ impl<'a> System<'a> for ExplodeOnDeathSystem {
 
     fn run(&mut self, (mut spawn_queue, faction, transform, to_destruct): Self::SystemData) {
         for (faction, transform, _) in (&faction, &transform, &to_destruct).join() {
-            if faction.id == FactionId::Pirates {
-                spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::Explosion, transform.pos.to_point()));
+            match faction.id {
+                FactionId::Pirates | FactionId::Good => {
+                    spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::Explosion, transform.pos.to_point()));
+                },
             }
         }
     }

@@ -31,6 +31,7 @@ impl Game {
         let imgui = ImGuiSystem::new(ctx);
         let mut world = World::new();
         let mut dispatcher = DispatcherBuilder::new()
+            .with(ArenaSystem, "arena_system", &[])
             .with(ConsumablesSystem, "consumables_system", &[])
             .with(InteractionSystem, "interaction_system", &[])
             .with(CameraSystem, "camera_system", &[])
@@ -66,6 +67,7 @@ impl Game {
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
         world.insert(Settings::default());
+        world.insert(Arena::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<Reflection>();
@@ -255,5 +257,9 @@ impl EventHandler for Game {
 
     fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
         self.world.write_resource::<Inputs>().mouse_scroll = y;
+    }
+
+    fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
+        graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, width, height)).unwrap();
     }
 }

@@ -1,8 +1,47 @@
-use crate::def::{ComponentDef, EntityDef, PartValue};
+use crate::def::{ArenaDef, ComponentDef, EntityDef, PartValue};
 use codegen::*;
 use heck::{CamelCase, ShoutySnakeCase, SnakeCase};
 use itertools::Itertools;
 use std::collections::{BTreeMap as Map, BTreeSet as Set};
+
+// TODO: split this in separate functions in separate file
+pub fn generate_arenas(arenas: &[ArenaDef]) -> Scope {
+    let mut scope = Scope::new();
+    {
+        let mut fn_gen = Function::new("set");
+        fn_gen.arg("id", "ID");
+        fn_gen.arg("arena", "&mut resource::Arena");
+        fn_gen.arg("spawn_queue", "&mut resource::SpawnQueue");
+        fn_gen.vis("pub");
+        fn_gen.line("match id {");
+        for arena in arenas {
+            fn_gen.line(&format!("ID::{} => set_{}(arena, spawn_queue),", arena.name.to_camel_case(), arena.name));
+        }
+        fn_gen.line("}");
+        scope.push_fn(fn_gen);
+    }
+    for arena in arenas {
+        let mut fn_gen = Function::new(&format!("set_{}", arena.name));
+        fn_gen.arg("arena", "&mut resource::Arena");
+        fn_gen.arg("spawn_queue", "&mut resource::SpawnQueue");
+        fn_gen.vis("pub");
+        fn_gen.line(format!("arena.size = crate::math::Size2f::new({}f32, {}f32);", arena.width, arena.height));
+        for entity in &arena.entities {
+            fn_gen.line(format!(
+                "spawn_queue.0.push_back(resource::SpawnItem::Entity(entity::ID::{}, crate::math::Point2f::new({}, {}), vec![]));",
+                entity.id.to_camel_case(), entity.pos.x, entity.pos.y
+            ));
+        }
+        scope.push_fn(fn_gen);
+    }
+    let names = arenas.into_iter().map(|def| def.name.to_camel_case());
+    scope.raw(&format!(
+        "#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)] pub enum ID{{{}}}",
+        names.clone().join(",")
+    ));
+    scope.raw(&format!("pub const IDS: [ID; {}] = [{}];", names.len(), names.map(|n| format!("ID::{}", n)).join(",")));
+    scope
+}
 
 pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
     let mut scope = Scope::new();

@@ -1,6 +1,7 @@
 use super::{
     super::{component::*, resource::*},
-    render_fill_circle, render_fill_sprite, render_line, render_polygon, render_sprite, render_stroke_circle,
+    render_fill_circle, render_fill_rect, render_fill_sprite, render_line, render_polygon, render_sprite,
+    render_stroke_circle,
 };
 use crate::{assets::*, entity, math::*, shader, ui::ImGuiSystem};
 use ggez::{graphics, Context};
@@ -120,20 +121,36 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
 }
 
 pub struct MapRenderingSystem<'a>(pub &'a mut Context);
+impl MapRenderingSystem<'_> {
+    const TILE: f32 = 100.0;
+    const TILE2: f32 = Self::TILE * 2.0;
+    const WATER_TILE: f32 = 50.0;
+}
 impl<'a> System<'a> for MapRenderingSystem<'_> {
-    type SystemData = (Read<'a, Camera>, Write<'a, AssetManager>);
+    type SystemData = (Read<'a, Camera>, Write<'a, AssetManager>, Read<'a, Arena>);
 
-    fn run(&mut self, (camera, mut assets): Self::SystemData) {
+    fn run(&mut self, (camera, mut assets, arena): Self::SystemData) {
         let size = graphics::window(self.0).get_inner_size().unwrap();
-        let bg = assets.get::<ImageAsset>("/sprites/map/water.png", self.0).unwrap();
+        let space = assets.get::<ImageAsset>("/sprites/map/space.png", self.0).unwrap();
+        let water = assets.get::<ImageAsset>("/sprites/map/water.png", self.0).unwrap();
+
+        let parallax_offset = Vec2f::new((camera.pos.x * -0.1) % Self::TILE, (camera.pos.y * -0.1) % Self::TILE);
+        render_fill_sprite(
+            self.0,
+            &space,
+            &(camera.pos + parallax_offset),
+            &Angle2f::zero(),
+            &Size2f::new(Self::TILE, Self::TILE),
+            &Size2f::new(size.width as f32 + Self::TILE2, size.height as f32 + Self::TILE2),
+        );
 
         render_fill_sprite(
             self.0,
-            &bg,
-            &((camera.pos / 50.0).floor() * 50.0),
+            &water,
+            &Vec2f::zero(),
             &Angle2f::zero(),
-            &Size2f::new(50.0, 50.0),
-            &Size2f::new(size.width as f32 + 100.0, size.height as f32 + 100.0),
+            &Size2f::new(Self::WATER_TILE, Self::WATER_TILE),
+            &arena.size,
         );
     }
 }
@@ -199,14 +216,23 @@ impl<'a> System<'a> for DebugPhysicRenderSystem<'_> {
     type SystemData = ReadExpect<'a, PhysicWorld>;
 
     fn run(&mut self, world: Self::SystemData) {
-        use nphysics2d::{ncollide2d::shape::ConvexPolygon, object::RigidBody};
+        use nphysics2d::ncollide2d::shape::{ConvexPolygon, Cuboid};
         for (_, collider) in world.colliders.iter() {
-            let body = world.bodies.get(collider.body()).unwrap().downcast_ref::<RigidBody<f32>>().unwrap();
-            let body_pos = body.position().translation.vector;
+            let body_pos = collider.position().translation.vector;
             if let Some(polygon) = collider.shape().as_shape::<ConvexPolygon<f32>>() {
                 let points: Vec<Point2f> =
                     polygon.points().iter().map(|p| Point2f::new(body_pos[0] + p[0], body_pos[1] + p[1])).collect();
                 render_polygon(self.0, &points, 0x05FC19AA);
+            }
+            if let Some(cuboid) = collider.shape().as_shape::<Cuboid<f32>>() {
+                let half_extents = cuboid.half_extents();
+                render_fill_rect(
+                    self.0,
+                    // why div 2 ??????????????????????
+                    &Point2f::new(body_pos[0] * 0.5, body_pos[1] * 0.5),
+                    &Size2f::new(half_extents.x * 2.0, half_extents.y * 2.0),
+                    0x05FC19AA,
+                );
             }
         }
     }

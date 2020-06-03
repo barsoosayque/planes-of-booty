@@ -1,17 +1,17 @@
 use super::{component::*, tag};
 use crate::{
-    particle, item, entity,
-    map::{Generator, Chunk},
     assets::AssetManager,
     attack::{ProjectileBuilder, ProjectileDef},
-    math::{Point2f, Vec2f},
+    entity, item,
+    math::{Point2f, Size2f, Vec2f},
+    particle,
     ui::*,
 };
-use ggez::{input, graphics};
+use ggez::{graphics, input};
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
-    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderSet, RigidBody, DefaultColliderHandle},
+    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderHandle, DefaultColliderSet, RigidBody},
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
 use specs::prelude::*;
@@ -25,11 +25,20 @@ pub struct InteractionCache {
     pub near_inventory: Option<Entity>,
 }
 
+#[derive(Debug)]
+pub struct Arena {
+    pub size: Size2f,
+    pub borders: [Option<DefaultColliderHandle>; 4],
+}
+impl Default for Arena {
+    fn default() -> Self { Self { size: Size2f::new(2000.0, 1200.0), borders: [None, None, None, None] } }
+}
+
 #[derive(Default, Debug)]
 pub struct Camera {
     pub pos: Vec2f,
     pub target: Option<Entity>,
-    draw_params: graphics::DrawParam
+    draw_params: graphics::DrawParam,
 }
 impl Camera {
     pub fn apply(&mut self, ctx: &mut ggez::Context) {
@@ -46,18 +55,12 @@ impl Camera {
     }
 
     pub fn project(&self, v: &Point2f) -> Point2f {
-         Point2f::new(v.x - self.draw_params.dest.x, v.y - self.draw_params.dest.y)
+        Point2f::new(v.x - self.draw_params.dest.x, v.y - self.draw_params.dest.y)
     }
 
     pub fn unproject(&self, v: &Point2f) -> Point2f {
-         Point2f::new(v.x + self.draw_params.dest.x, v.y + self.draw_params.dest.y)
+        Point2f::new(v.x + self.draw_params.dest.x, v.y + self.draw_params.dest.y)
     }
-}
-
-#[derive(Default, Debug)]
-pub struct ChunkMap {
-    pub chunks: Vec<Chunk>,
-    pub generator: Generator
 }
 
 pub struct PhysicWorld {
@@ -93,27 +96,23 @@ impl PhysicWorld {
     }
 
     pub fn entity_for_collider(&self, handle: &DefaultColliderHandle) -> Option<&Entity> {
-        self.colliders.get(*handle)
-            .and_then(|c| c.user_data())
-            .and_then(|d| d.downcast_ref::<Entity>())
+        self.colliders.get(*handle).and_then(|c| c.user_data()).and_then(|d| d.downcast_ref::<Entity>())
     }
 
     pub fn bodies_iter(&self) -> impl Iterator<Item = (Entity, &RigidBody<f32>)> {
-        self.bodies
-            .iter()
-            .filter_map(|b| b.1.downcast_ref::<RigidBody<f32>>())
-            .map(|b| (*b.user_data().unwrap().downcast_ref::<Entity>().unwrap(), b))
+        self.bodies.iter().filter_map(|b| b.1.downcast_ref::<RigidBody<f32>>()).filter_map(|b| match b.user_data() {
+            Some(d) => Some((*d.downcast_ref::<Entity>().unwrap(), b)),
+            None => None,
+        })
     }
 
     pub fn bodies_iter_mut(&mut self) -> impl Iterator<Item = (Entity, &mut RigidBody<f32>)> {
-        self.bodies
-            .iter_mut()
-            .filter_map(|b| b.1.downcast_mut::<RigidBody<f32>>())
-            .map(|b| (*b.user_data().unwrap().downcast_ref::<Entity>().unwrap(), b))
-    }
-
-    pub fn _collides_iter(&self) -> impl Iterator<Item = (Entity, &Collider<f32, DefaultBodyHandle>)> {
-        self.colliders.iter().map(|c| (*c.1.user_data().unwrap().downcast_ref::<Entity>().unwrap(), c.1))
+        self.bodies.iter_mut().filter_map(|b| b.1.downcast_mut::<RigidBody<f32>>()).filter_map(|b| {
+            match b.user_data() {
+                Some(d) => Some((*d.downcast_ref::<Entity>().unwrap(), b)),
+                None => None,
+            }
+        })
     }
 }
 
@@ -145,6 +144,7 @@ pub struct UiData<'a> {
     pub hotbars: WriteStorage<'a, Hotbar>,
     pub hpools: ReadStorage<'a, HealthPool>,
     pub consumers: ReadStorage<'a, Consumer>,
+    pub transforms: ReadStorage<'a, Transform>,
 
     pub consumables: ReadStorage<'a, Consumable>,
     pub wpn_props: ReadStorage<'a, WeaponProperties>,
@@ -155,6 +155,7 @@ pub struct UiData<'a> {
 
     pub sprites: ReadStorage<'a, Sprite>,
 
+    pub arena: Write<'a, Arena>,
     pub spawn_queue: Write<'a, SpawnQueue>,
     pub inputs: Write<'a, Inputs>,
     pub settings: Write<'a, Settings>,
@@ -167,12 +168,16 @@ pub struct UiHub {
     pub hud: Hud,
     pub debug_window: DebugWindow,
     pub inventory_window: InventoryWindow,
+    pub arena_settings: ArenaSettingsWindow,
 }
 impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
     fn build<'ctx>(&mut self, ui: &mut imgui::Ui, ctx: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
         self.menu.build(ui, ctx, data);
         if self.menu.is_show_spawn_window {
-            self.debug_window.build(ui, ctx, data);
+            self.debug_window.build(ui, ctx, (data, &mut self.menu.is_show_spawn_window));
+        }
+        if self.menu.is_show_arena_settings {
+            self.arena_settings.build(ui, ctx, (data, &mut self.menu.is_show_arena_settings));
         }
         self.inventory_window.build(ui, ctx, data);
         self.hud.build(ui, ctx, data);
@@ -183,9 +188,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
 pub struct SpawnQueue(pub Queue<SpawnItem>);
 
 impl ProjectileBuilder for SpawnQueue {
-    fn build(&mut self, def: ProjectileDef) {
-        self.0.push_back(SpawnItem::Projectile(def));
-    }
+    fn build(&mut self, def: ProjectileDef) { self.0.push_back(SpawnItem::Projectile(def)); }
 }
 
 pub enum SpawnItem {

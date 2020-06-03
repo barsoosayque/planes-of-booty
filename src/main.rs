@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ggez::{
-    conf::{NumSamples, WindowSetup},
+    conf::{FullscreenType, NumSamples, WindowMode, WindowSetup},
     event, ContextBuilder,
 };
 use log::info;
@@ -8,16 +8,16 @@ use log::info;
 #[macro_use]
 mod math;
 
+mod arena;
 mod assets;
 mod attack;
 mod ecs;
 mod entity;
 mod game;
 mod item;
-mod map;
+mod particle;
 mod shader;
 mod ui;
-mod particle;
 
 pub fn setup_logging() -> Result<()> {
     use fern::colors::{Color, ColoredLevelConfig};
@@ -46,6 +46,7 @@ fn run() -> Result<()> {
             vsync: true,
             ..WindowSetup::default()
         })
+        .window_mode(WindowMode { fullscreen_type: FullscreenType::Desktop, borderless: true, ..WindowMode::default() })
         .add_resource_path("resources")
         .build()?;
 

@@ -7,6 +7,25 @@ use std::{collections::BTreeMap as Map, fmt};
 use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
+pub struct ArenaDef {
+    #[serde(skip)]
+    pub name: String,
+    pub width: f32,
+    pub height: f32,
+    #[serde(default)]
+    pub entities: Vec<ArenaEntityDef>,
+    #[serde(default)]
+    pub spawn_points: Vec<Point>
+}
+#[derive(Deserialize, Default)]
+pub struct ArenaEntityDef {
+    pub id: String,
+    pub pos: Point
+}
+#[derive(Deserialize, Default)]
+pub struct Point { pub x: f32, pub y: f32 }
+
+#[derive(Deserialize, Default)]
 pub struct EntityDef {
     #[serde(skip)]
     pub name: String,

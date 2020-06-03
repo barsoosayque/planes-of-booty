@@ -2,9 +2,45 @@ use super::super::{component::*, resource::*, tag};
 use crate::{math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use itertools::Itertools;
+use nphysics2d::{
+    math::Isometry,
+    ncollide2d::shape::{Cuboid, ShapeHandle},
+    object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
+};
 use rand::{distributions::uniform::Uniform, thread_rng, Rng};
 use specs::prelude::*;
 use std::ops::DerefMut;
+
+pub struct ArenaSystem;
+impl<'a> System<'a> for ArenaSystem {
+    type SystemData = (WriteExpect<'a, PhysicWorld>, Write<'a, Arena>);
+
+    fn run(&mut self, (mut world, mut arena): Self::SystemData) {
+        let size = arena.size;
+        for (i, border) in arena.borders.iter_mut().enumerate() {
+            let handle = match border {
+                Some(collider) => collider,
+                None => {
+                    let body = world.bodies.insert(RigidBodyDesc::<f32>::new().status(BodyStatus::Static).build());
+                    let shape = ShapeHandle::new(Cuboid::new([0.0, 0.0].into()));
+                    let collider =
+                        world.colliders.insert(ColliderDesc::<f32>::new(shape).build(BodyPartHandle(body, 0)));
+                    border.replace(collider);
+                    border.as_mut().unwrap()
+                },
+            };
+            let collider = world.colliders.get_mut(*handle).unwrap();
+            let d = if i < 2 { 1.0 } else { -1.0 };
+            if i % 2 == 0 {
+                collider.set_position(Isometry::translation(d * (size.width * 0.5 + 50.0), 0.0));
+                collider.set_shape(ShapeHandle::new(Cuboid::new([50.0, size.height * 0.5].into())));
+            } else {
+                collider.set_position(Isometry::translation(0.0, d * (size.height * 0.5 + 50.0)));
+                collider.set_shape(ShapeHandle::new(Cuboid::new([size.width * 0.5, 50.0].into())));
+            }
+        }
+    }
+}
 
 pub struct CameraSystem;
 impl<'a> System<'a> for CameraSystem {
@@ -212,21 +248,21 @@ impl<'a> System<'a> for ImpactDamageSystem {
         for contact in physic_world.geometry_world.contact_events() {
             if let ContactEvent::Started(handle1, handle2) = contact {
                 let (entity1, entity2) = (
-                    physic_world.entity_for_collider(&handle1).unwrap(),
-                    physic_world.entity_for_collider(&handle2).unwrap(),
+                    physic_world.entity_for_collider(&handle1),
+                    physic_world.entity_for_collider(&handle2)
                 );
 
                 let damage = Self::impact_factor(
-                    &movements.get(*entity1).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
-                    &movements.get(*entity2).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
+                    &entity1.and_then(|e| movements.get(*e)).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
+                    &entity2.and_then(|e| movements.get(*e)).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
                 ) * Self::DAMAGE_MAX;
 
                 if damage > 0.0 {
                     let damage_pack = (damage.floor() as u32, DamageType::Impact);
-                    if let Some(rec) = dmg_recievers.get_mut(*entity1) {
+                    if let Some(rec) = entity1.and_then(|e| dmg_recievers.get_mut(*e)) {
                         rec.damage_queue.push(damage_pack);
                     }
-                    if let Some(rec) = dmg_recievers.get_mut(*entity2) {
+                    if let Some(rec) = entity2.and_then(|e| dmg_recievers.get_mut(*e)) {
                         rec.damage_queue.push(damage_pack);
                     }
                 }
@@ -274,10 +310,16 @@ impl<'a> System<'a> for DamageSystem {
 
 pub struct DestructionSystem;
 impl<'a> System<'a> for DestructionSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>);
+    type SystemData = (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>, WriteStorage<'a, Target>);
 
-    fn run(&mut self, (entities, to_destruct): Self::SystemData) {
+    fn run(&mut self, (entities, to_destruct, mut targets): Self::SystemData) {
         for (e, _) in (&entities, &to_destruct).join() {
+            for t in (&mut targets).join() {
+                if t.target == Some(e) {
+                    t.target.take();
+                }
+            }
+
             entities.delete(e).unwrap();
         }
     }

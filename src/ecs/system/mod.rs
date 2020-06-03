@@ -54,6 +54,27 @@ pub fn render_stroke_circle(ctx: &mut ggez::Context, pos: &Point2f, radius: f32,
     render_circle(ctx, pos, radius, color, graphics::DrawMode::stroke(width));
 }
 
+fn render_rect(ctx: &mut ggez::Context, pos: &Point2f, size: &Size2f, color: u32, mode: graphics::DrawMode) {
+    let color = graphics::Color::from_rgba_u32(color);
+    let circle = graphics::Mesh::new_rectangle(
+        ctx,
+        mode,
+        [pos.x - size.width * 0.5, pos.y - size.height * 0.5, size.width, size.height].into(),
+        color,
+    )
+    .unwrap();
+    let param = graphics::DrawParam::default().dest(pos.clone());
+    ggez::graphics::draw(ctx, &circle, param).unwrap();
+}
+
+pub fn render_fill_rect(ctx: &mut ggez::Context, pos: &Point2f, size: &Size2f, color: u32) {
+    render_rect(ctx, pos, size, color, graphics::DrawMode::fill());
+}
+
+pub fn _render_stroke_rect(ctx: &mut ggez::Context, pos: &Point2f, size: &Size2f, width: f32, color: u32) {
+    render_rect(ctx, pos, size, color, graphics::DrawMode::stroke(width));
+}
+
 pub fn render_line(ctx: &mut ggez::Context, points: &[Point2f], width: f32, color: u32) {
     let color = graphics::Color::from_rgba_u32(color);
     let mesh = graphics::Mesh::new_line(ctx, points, width, color).unwrap();

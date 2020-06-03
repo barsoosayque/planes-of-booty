@@ -3,7 +3,9 @@ pub mod hud;
 pub mod inventory;
 pub mod menu;
 pub mod system;
+pub mod arena_settings;
 
+pub use arena_settings::ArenaSettingsWindow;
 pub use debug::DebugWindow;
 pub use hud::Hud;
 pub use inventory::InventoryWindow;

@@ -12,11 +12,12 @@ pub struct DebugWindow {
 impl Default for DebugWindow {
     fn default() -> Self { Self { selected_item: None, selected_entity: None, item_spawn_count: 1 } }
 }
-impl<'a> UiBuilder<&mut UiData<'a>> for DebugWindow {
-    fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
+impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for DebugWindow {
+    fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, (data, is_opened): (&mut UiData<'a>, &mut bool)) {
         Window::new(im_str!("Debug window"))
             .resizable(false)
             .focus_on_appearing(false)
+            .opened(is_opened)
             .size([300.0, 0.0], Condition::Once)
             .build(ui, || {
                 ui.text(im_str!("Spawn entity:"));
@@ -43,10 +44,10 @@ impl<'a> UiBuilder<&mut UiData<'a>> for DebugWindow {
                             let tex_id = ctx.get_texture_id_for(&asset);
                             Image::new(tex_id, [30.0, 30.0]).build(ui);
                             ui.same_line(10.0);
-                        }
-                        let label = ImString::new(format!("{:?}", id));
-                        if Selectable::new(&label).selected(self.selected_item == Some(*id)).size([0.0, 30.0]).build(&ui) {
-                            self.selected_item = Some(*id);
+                            let label = ImString::new(format!("{:?}", id));
+                            if Selectable::new(&label).selected(self.selected_item == Some(*id)).size([0.0, 20.0]).build(&ui) {
+                                self.selected_item = Some(*id);
+                            }
                         }
                     }
                 });
