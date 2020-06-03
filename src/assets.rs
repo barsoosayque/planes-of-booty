@@ -2,7 +2,7 @@ use crate::shader::ShaderInName;
 use gfx::{memory::Pod, pso::buffer::Structure, shade::ConstFormat};
 use ggez::graphics::{FilterMode, Image, Shader, WrapMode};
 use log::debug;
-use std::{any::Any, cell::UnsafeCell, collections::BTreeMap, sync::Arc};
+use std::{any::Any, collections::BTreeMap, sync::Arc};
 
 #[derive(Default)]
 pub struct AssetManager(BTreeMap<String, Arc<dyn Any + Send + Sync>>, u32);
@@ -19,7 +19,7 @@ impl AssetManager {
         }
     }
 
-    pub fn key_for<A: Asset + 'static>(&self, asset: &A) -> Option<&String> {
+    pub fn _key_for<A: Asset + 'static>(&self, asset: &A) -> Option<&String> {
         self.0
             .iter()
             .find(|(_, a)| if let Some(a) = a.downcast_ref::<A>() { a.id() == asset.id() } else { false })
@@ -33,31 +33,8 @@ pub trait Asset: Sized + Send + Sync {
     fn id(&self) -> u32;
 }
 
-#[derive(Debug)]
-pub struct LazyAsset<A: Asset>(String, UnsafeCell<Option<Arc<A>>>);
-impl<A: Asset + 'static> LazyAsset<A> {
-    pub fn new(key: &str) -> Self { Self(key.to_owned(), UnsafeCell::new(None)) }
-
-    pub fn try_get<'a>(&'a self) -> Option<&'a A> {
-        unsafe { self.1.get().as_ref().and_then(|opt| opt.as_ref()).map(|arc| arc.as_ref()) }
-    }
-
-    pub fn get<'a>(&'a self, assets: &mut AssetManager, ctx: &mut A::Context) -> anyhow::Result<&'a A> {
-        unsafe {
-            match self.1.get().as_ref().and_then(|opt| opt.as_ref()) {
-                Some(asset) => Ok(asset),
-                None => {
-                    self.1.get().replace(Some(assets.get::<A>(&self.0, ctx)?));
-                    Ok(self.1.get().as_ref().unwrap().as_ref().unwrap())
-                },
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct ImageAsset(u32, Image);
-pub type LazyImageAsset = LazyAsset<ImageAsset>;
 impl std::ops::Deref for ImageAsset {
     type Target = Image;
 

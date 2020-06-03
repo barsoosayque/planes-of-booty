@@ -2,59 +2,47 @@ use crate::codegen::*;
 use def::*;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{PathBuf},
 };
 
 mod codegen;
 mod def;
 
-fn read_defs_from<P: AsRef<Path>>(path: P) -> impl Iterator<Item = (EntityDef, PathBuf)> {
-    fs::read_dir(path).unwrap().filter_map(|r| r.ok()).filter_map(|entry| {
-        if !entry.file_type().unwrap().is_file() {
-            println!("Skipping {:?}, not a file.. ", entry.path());
-            None
-        } else {
-            let path = entry.path();
-            let content = fs::read_to_string(&path).unwrap();
+macro_rules! read_from {
+    ($path:expr => $type:ident) => {
+        fs::read_dir($path).unwrap().filter_map(|r| r.ok()).filter_map(|entry| {
+            if !entry.file_type().unwrap().is_file() {
+                println!("Skipping {:?}, not a file.. ", entry.path());
+                None
+            } else {
+                let path = entry.path();
+                let content = fs::read_to_string(&path).unwrap();
 
-            print!("Parsing file {:?} as EntityDef.. ", path);
-            match serde_yaml::from_str::<EntityDef>(&content) {
-                Ok(def) => {
-                    println!("Success !");
-                    let name = path.file_stem().and_then(|s| s.to_str()).unwrap();
-                    Some((EntityDef { name: name.to_owned(), ..def }, path))
-                },
-                Err(err) => {
-                    println!("Error !");
-                    panic!("Error while parsing EntityDef definition file {:?}: {}", path, err);
-                },
+                print!("Parsing file {:?} as $type.. ", path);
+                match serde_yaml::from_str::<$type>(&content) {
+                    Ok(def) => {
+                        println!("Success !");
+                        let name = path.file_stem().and_then(|s| s.to_str()).unwrap();
+                        Some(($type { name: name.to_owned(), ..def }, path))
+                    },
+                    Err(err) => {
+                        println!("Error !");
+                        panic!("Error while parsing $type definition file {:?}: {}", path, err);
+                    },
+                }
             }
-        }
-    })
+        })
+    };
 }
-fn read_arenas_from<P: AsRef<Path>>(path: P) -> impl Iterator<Item = (ArenaDef, PathBuf)> {
-    fs::read_dir(path).unwrap().filter_map(|r| r.ok()).filter_map(|entry| {
-        if !entry.file_type().unwrap().is_file() {
-            println!("Skipping {:?}, not a file.. ", entry.path());
-            None
-        } else {
-            let path = entry.path();
-            let content = fs::read_to_string(&path).unwrap();
-
-            print!("Parsing file {:?} as ArenaDef.. ", path);
-            match serde_yaml::from_str::<ArenaDef>(&content) {
-                Ok(def) => {
-                    println!("Success !");
-                    let name = path.file_stem().and_then(|s| s.to_str()).unwrap();
-                    Some((ArenaDef { name: name.to_owned(), ..def }, path))
-                },
-                Err(err) => {
-                    println!("Error !");
-                    panic!("Error while parsing ArenaDef definition file {:?}: {}", path, err);
-                },
-            }
+macro_rules! process_defs {
+    ($from:expr => $to:expr, $type:ident, $gen:expr) => {
+        let (defs, paths): (Vec<$type>, Vec<PathBuf>) = read_from!($from => $type).unzip();
+        fs::write($to, $gen(&defs)).unwrap();
+        println!("Total $type generated: {}", defs.len());
+        for path in paths {
+            println!("cargo:rerun-if-changed={:?}", path);
         }
-    })
+    }
 }
 
 fn filter_by_rarity(def: &&EntityDef, rarity: &str) -> bool {
@@ -79,36 +67,27 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     fs::create_dir_all(format!("{}/generated/", out_dir)).unwrap();
 
-    let (entities, entities_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/entities").unzip();
-    fs::write(format!("{}/generated/entity.rs", out_dir), generate_full_group(&entities, "e").to_string()).unwrap();
-    println!("Total entities generated: {}", entities.len());
+    process_defs!("resources/entities" => format!("{}/generated/entity.rs", out_dir), EntityDef, |entities|{
+        generate_full_group(entities, "e").to_string()
+    });
 
-    let (items, items_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/items").unzip();
-    let mut items_body = generate_full_group(&items, "i");
-    items_body.raw(&generate_array_by_filter(&items, "ANY_COMMON", is_def_common));
-    items_body.raw(&generate_array_by_filter(&items, "ANY_RARE", is_def_rare));
-    items_body.raw(&generate_array_by_filter(&items, "ANY_LEGENDARY", is_def_legendary));
-    fs::write(format!("{}/generated/item.rs", out_dir), items_body.to_string()).unwrap();
-    println!("Total items generated: {}", items.len());
+    process_defs!("resources/items" => format!("{}/generated/item.rs", out_dir), EntityDef, |items|{
+        let mut items_body = generate_full_group(items, "i");
+        items_body.raw(&generate_array_by_filter(items, "ANY_COMMON", is_def_common));
+        items_body.raw(&generate_array_by_filter(items, "ANY_RARE", is_def_rare));
+        items_body.raw(&generate_array_by_filter(items, "ANY_LEGENDARY", is_def_legendary));
+        items_body.to_string()
+    });
 
-    let (particles, particles_path): (Vec<EntityDef>, Vec<PathBuf>) = read_defs_from("resources/particles").unzip();
-    fs::write(format!("{}/generated/particle.rs", out_dir), generate_spawn_only(&particles, "p").to_string()).unwrap();
-    println!("Total particles generated: {}", particles.len());
+    process_defs!("resources/particles" => format!("{}/generated/particle.rs", out_dir), EntityDef, |particles|{
+        generate_spawn_only(particles, "p").to_string()
+    });
 
-    let (arenas, arenas_path): (Vec<ArenaDef>, Vec<PathBuf>) = read_arenas_from("resources/arenas").unzip();
-    fs::write(format!("{}/generated/arena.rs", out_dir), generate_arenas(&arenas).to_string()).unwrap();
-    println!("Total arenas generated: {}", arenas.len());
+    process_defs!("resources/arenas" => format!("{}/generated/arena.rs", out_dir), ArenaDef, |arenas|{
+        generate_arenas(arenas).to_string()
+    });
 
-    for path in entities_path {
-        println!("cargo:rerun-if-changed={:?}", path);
-    }
-    for path in items_path {
-        println!("cargo:rerun-if-changed={:?}", path);
-    }
-    for path in particles_path {
-        println!("cargo:rerun-if-changed={:?}", path);
-    }
-    for path in arenas_path {
-        println!("cargo:rerun-if-changed={:?}", path);
-    }
+    process_defs!("resources/spawn_groups" => format!("{}/generated/spawn_group.rs", out_dir), SpawnGroupDef, |spawn_groups|{
+        generate_spawn_groups(spawn_groups).to_string()
+    });
 }

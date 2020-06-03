@@ -19,3 +19,6 @@ entities:
       pos: { x: -413.82178, y: -308.85245 }
     - id: reef_4
       pos: { x: -834.9099, y: -84.33569 }
+spawn_points:
+    - pos: { x: 200.0, y: 200.0 }
+      radius: 100.0

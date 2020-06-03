@@ -145,8 +145,6 @@ impl Content {
 
     pub fn have_some(&self) -> bool { self.0.iter().any(|i| i.is_some()) }
 
-    pub fn iter(&self) -> impl Iterator<Item = &ItemBox> { self.0.iter() }
-
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut ItemBox> { self.0.iter_mut() }
 }
 
@@ -223,7 +221,7 @@ pub struct WeaponProperties {
 /////////////
 
 #[derive(Component)]
-#[storage(FlaggedStorage)]
+#[storage(VecStorage)]
 pub struct Physic {
     pub body: DefaultBodyHandle,
     pub collide: (DefaultColliderHandle, CollideShapeHandle),
@@ -304,6 +302,7 @@ pub struct Faction {
 pub enum FactionId {
     Good,
     Pirates,
+    Crabs,
 }
 
 ///////////////

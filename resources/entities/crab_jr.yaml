@@ -32,7 +32,7 @@ components:
         primary: { item: "crab_shotgun" }
         __default: true
     Faction:
-        id: { faction: "pirates" }
+        id: { faction: "crabs" }
     Target: { __default: true }
     Transform: { __default: true }
     DamageReciever: { __default: true }

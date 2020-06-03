@@ -7,6 +7,21 @@ use std::{collections::BTreeMap as Map, fmt};
 use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
+pub struct SpawnGroupDef {
+    #[serde(skip)]
+    pub name: String,
+    pub start: u32,
+    pub grow: f32,
+    #[serde(default)]
+    pub weighted: Vec<WeightedEntityDef>,
+}
+#[derive(Deserialize, Default)]
+pub struct WeightedEntityDef {
+    pub id: String,
+    pub weight: u8,
+}
+
+#[derive(Deserialize, Default)]
 pub struct ArenaDef {
     #[serde(skip)]
     pub name: String,
@@ -15,15 +30,23 @@ pub struct ArenaDef {
     #[serde(default)]
     pub entities: Vec<ArenaEntityDef>,
     #[serde(default)]
-    pub spawn_points: Vec<Point>
+    pub spawn_points: Vec<SpawnPointDef>,
 }
 #[derive(Deserialize, Default)]
 pub struct ArenaEntityDef {
     pub id: String,
-    pub pos: Point
+    pub pos: Point,
 }
 #[derive(Deserialize, Default)]
-pub struct Point { pub x: f32, pub y: f32 }
+pub struct SpawnPointDef {
+    pub radius: f32,
+    pub pos: Point,
+}
+#[derive(Deserialize, Default)]
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
+}
 
 #[derive(Deserialize, Default)]
 pub struct EntityDef {

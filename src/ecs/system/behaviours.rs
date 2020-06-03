@@ -263,27 +263,16 @@ impl<'a> System<'a> for ProjectileSystem {
     }
 }
 
-#[derive(Default)]
-pub struct PhysicSystem {
-    reader_id: Option<ReaderId<ComponentEvent>>,
-    removed: BitSet,
-}
+pub struct PhysicSystem;
 impl<'a> System<'a> for PhysicSystem {
     type SystemData = (
         WriteStorage<'a, Transform>,
         WriteStorage<'a, Movement>,
-        ReadStorage<'a, Physic>,
         Read<'a, DeltaTime>,
         WriteExpect<'a, PhysicWorld>,
     );
 
-    fn run(&mut self, (mut transforms, mut movements, physics, delta, mut world): Self::SystemData) {
-        read_event!(physics, self.reader_id.as_mut().unwrap(); Removed => self.removed);
-        for (physic, _) in (&physics, &self.removed).join() {
-            world.colliders.remove(physic.collide.0);
-            world.bodies.remove(physic.body);
-        }
-
+    fn run(&mut self, (mut transforms, mut movements, delta, mut world): Self::SystemData) {
         // set data before simulation
         for (e, body) in world.bodies_iter_mut() {
             if let Some(movement) = movements.get_mut(e) {
@@ -329,11 +318,6 @@ impl<'a> System<'a> for PhysicSystem {
                 movement.velocity.y = velocity[1];
             }
         }
-    }
-
-    fn setup(&mut self, world: &mut World) {
-        Self::SystemData::setup(world);
-        self.reader_id = Some(world.write_storage::<Physic>().register_reader());
     }
 }
 
@@ -573,6 +557,9 @@ impl<'a> System<'a> for ExplodeOnDeathSystem {
     fn run(&mut self, (mut spawn_queue, faction, transform, to_destruct): Self::SystemData) {
         for (faction, transform, _) in (&faction, &transform, &to_destruct).join() {
             match faction.id {
+                FactionId::Crabs => {
+                    spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::MediumSplash, transform.pos.to_point()));
+                }
                 FactionId::Pirates | FactionId::Good => {
                     spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::Explosion, transform.pos.to_point()));
                 },

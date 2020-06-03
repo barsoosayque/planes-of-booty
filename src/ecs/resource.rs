@@ -1,5 +1,6 @@
 use super::{component::*, tag};
 use crate::{
+    arena,
     assets::AssetManager,
     attack::{ProjectileBuilder, ProjectileDef},
     entity, item,
@@ -11,7 +12,7 @@ use ggez::{graphics, input};
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
-    object::{Collider, DefaultBodyHandle, DefaultBodySet, DefaultColliderHandle, DefaultColliderSet, RigidBody},
+    object::{DefaultBodySet, DefaultColliderHandle, DefaultColliderSet, RigidBody},
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
 use specs::prelude::*;
@@ -28,10 +29,14 @@ pub struct InteractionCache {
 #[derive(Debug)]
 pub struct Arena {
     pub size: Size2f,
+    pub difficulty: f32,
     pub borders: [Option<DefaultColliderHandle>; 4],
+    pub change_to: Option<arena::ID>,
 }
 impl Default for Arena {
-    fn default() -> Self { Self { size: Size2f::new(2000.0, 1200.0), borders: [None, None, None, None] } }
+    fn default() -> Self {
+        Self { size: Size2f::new(2000.0, 1200.0), difficulty: 1.0, borders: [None, None, None, None], change_to: None }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -56,10 +61,6 @@ impl Camera {
 
     pub fn project(&self, v: &Point2f) -> Point2f {
         Point2f::new(v.x - self.draw_params.dest.x, v.y - self.draw_params.dest.y)
-    }
-
-    pub fn unproject(&self, v: &Point2f) -> Point2f {
-        Point2f::new(v.x + self.draw_params.dest.x, v.y + self.draw_params.dest.y)
     }
 }
 

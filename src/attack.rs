@@ -57,7 +57,7 @@ pub trait ProjectileBehaviour: Sync + Send {
 fn exclude_shooter(shooter: Option<&FactionId>) -> Vec<CollisionGroup> {
     match shooter {
         Some(&FactionId::Good) => vec![CollisionGroup::Players],
-        Some(&FactionId::Pirates) => vec![CollisionGroup::Enemies],
+        Some(&FactionId::Pirates) | Some(&FactionId::Crabs) => vec![CollisionGroup::Enemies],
         _ => vec![],
     }
 }
@@ -70,23 +70,6 @@ fn with_accuracy(normal: Vec2f, accuracy: f32) -> Vec2f {
 fn with_angle_offset(normal: Vec2f, angle: Angle2f) -> Vec2f {
     let (s, c) = angle.sin_cos();
     Vec2f::new(normal.x * c - normal.y * s, normal.x * s + normal.y * c)
-}
-
-pub struct Hook;
-impl AttackPattern for Hook {
-    fn description(&self) -> &str {
-        "Shoot a pair of hooks which launches attached stuff towards together upon landing."
-    }
-
-    fn attack(&self, data: &mut AttackPatternData) {
-        // if let Some(body) = &mut data.shooter_body {
-        //     let throw = data.prop.shooting_normal * Self::POWER;
-        //     body.apply_force(0, &Force::linear([throw.x, throw.y].into()), ForceType::VelocityChange, true);
-        // }
-        // if let Some(dmg_rec) = &mut data.shooter_damage_reciever {
-        //     dmg_rec.damage_immunity[DamageType::Impact].replace(0.8);
-        // }
-    }
 }
 
 pub struct Ram {

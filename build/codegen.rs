@@ -1,4 +1,4 @@
-use crate::def::{ArenaDef, ComponentDef, EntityDef, PartValue};
+use crate::def::{ArenaDef, ComponentDef, EntityDef, PartValue, SpawnGroupDef};
 use codegen::*;
 use heck::{CamelCase, ShoutySnakeCase, SnakeCase};
 use itertools::Itertools;
@@ -26,11 +26,25 @@ pub fn generate_arenas(arenas: &[ArenaDef]) -> Scope {
         fn_gen.arg("spawn_queue", "&mut resource::SpawnQueue");
         fn_gen.vis("pub");
         fn_gen.line(format!("arena.size = crate::math::Size2f::new({}f32, {}f32);", arena.width, arena.height));
+        fn_gen.line("use rand::{thread_rng, seq::SliceRandom, Rng};");
         for entity in &arena.entities {
             fn_gen.line(format!(
                 "spawn_queue.0.push_back(resource::SpawnItem::Entity(entity::ID::{}, crate::math::Point2f::new({}, {}), vec![]));",
                 entity.id.to_camel_case(), entity.pos.x, entity.pos.y
             ));
+        }
+        for point in &arena.spawn_points {
+            let halfr = point.radius * 0.5;
+            fn_gen.line("{");
+            fn_gen.line("let mut rng = thread_rng();");
+            fn_gen.line("let generated = SPAWN_GROUPS.choose(&mut rng).unwrap().spawn(arena.difficulty);");
+            fn_gen.line("for id in generated {");
+            fn_gen.line(format!(
+                "spawn_queue.0.push_back(resource::SpawnItem::Entity(id,\
+                crate::math::Point2f::new({}f32 + rng.gen_range({}f32, {}f32), {}f32 + rng.gen_range({}f32, {}f32)), vec![]));",
+                point.pos.x, -halfr, halfr, point.pos.y, -halfr, halfr
+            ));
+            fn_gen.line("}\n}");
         }
         scope.push_fn(fn_gen);
     }
@@ -43,7 +57,61 @@ pub fn generate_arenas(arenas: &[ArenaDef]) -> Scope {
     scope
 }
 
-pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
+// TODO: split this as well
+pub fn generate_spawn_groups(spawn_groups: &[SpawnGroupDef]) -> Scope {
+    let mut scope = Scope::new();
+    let names = spawn_groups.into_iter().map(|def| def.name.to_camel_case());
+    scope.raw(&format!(
+        "#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)] pub enum SpawnGroup{{{}}}",
+        names.clone().join(",")
+    ));
+    for grp in spawn_groups {
+        scope.raw(&format!(
+            "const {}_CHOICES: [entity::ID; {}] = [{}];",
+            grp.name.to_shouty_snake_case(),
+            grp.weighted.len(),
+            grp.weighted.iter().map(|w| format!("entity::ID::{}", w.id.to_camel_case())).join(",")
+        ));
+        scope.raw(&format!(
+            "const {}_WEIGHTS: [u8; {}] = [{}];",
+            grp.name.to_shouty_snake_case(),
+            grp.weighted.len(),
+            grp.weighted.iter().map(|w| format!("{}", w.weight)).join(",")
+        ));
+    }
+    let impl_gen = scope.new_impl("SpawnGroup");
+    let fn_gen = impl_gen.new_fn("spawn");
+    fn_gen.vis("pub");
+    fn_gen.arg_self();
+    fn_gen.arg("difficulty", "f32");
+    fn_gen.ret("Vec<entity::ID>");
+    fn_gen.line("use rand::distributions::weighted::alias_method::WeightedIndex;");
+    fn_gen.line("use rand::prelude::*;");
+    fn_gen.line("let mut rng = thread_rng();");
+    fn_gen.line("match self {");
+    for grp in spawn_groups {
+        let shouty = grp.name.to_shouty_snake_case();
+        fn_gen.line(format!(
+            "SpawnGroup::{} => {{\
+                let dist = WeightedIndex::new({}_WEIGHTS.to_vec()).unwrap();\
+                let size = {}u32 + (difficulty * {}f32).floor() as u32;\
+                let mut v = Vec::with_capacity(size as usize);\
+                for _ in 0..=size {{ v.push({}_CHOICES[dist.sample(&mut rng)]) }}\
+                v }}",
+            grp.name.to_camel_case(), shouty, grp.start, grp.grow, shouty
+        ));
+    }
+    fn_gen.line("}");
+
+    scope.raw(&format!(
+        "pub const SPAWN_GROUPS: [SpawnGroup; {}] = [{}];",
+        names.len(),
+        names.map(|n| format!("SpawnGroup::{}", n)).join(",")
+    ));
+    scope
+}
+
+pub fn generate_full_group(defs: &[EntityDef], group_name: &str) -> Scope {
     let mut scope = Scope::new();
     scope.raw(&generate_names_enum(defs));
     scope.push_fn(generate_generic_spawn_fn(&defs));
@@ -54,7 +122,7 @@ pub fn generate_full_group(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
     scope
 }
 
-pub fn generate_spawn_only(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
+pub fn generate_spawn_only(defs: &[EntityDef], group_name: &str) -> Scope {
     let mut scope = Scope::new();
     scope.raw(&generate_names_enum(defs));
     scope.push_fn(generate_generic_spawn_fn(&defs));
@@ -64,7 +132,7 @@ pub fn generate_spawn_only(defs: &Vec<EntityDef>, group_name: &str) -> Scope {
     scope
 }
 
-pub fn generate_names_enum(defs: &Vec<EntityDef>) -> String {
+pub fn generate_names_enum(defs: &[EntityDef]) -> String {
     let names = defs.into_iter().map(|def| def.name.to_camel_case());
     let r#enum = format!(
         "#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)] pub enum ID{{{}}}",
@@ -75,7 +143,7 @@ pub fn generate_names_enum(defs: &Vec<EntityDef>) -> String {
 }
 
 pub fn generate_array_by_filter<F: FnMut(&&EntityDef) -> bool>(
-    defs: &Vec<EntityDef>,
+    defs: &[EntityDef],
     array_name: &str,
     filter: F,
 ) -> String {
@@ -88,7 +156,7 @@ pub fn generate_array_by_filter<F: FnMut(&&EntityDef) -> bool>(
     )
 }
 
-pub fn generate_generic_spawn_fn(defs: &Vec<EntityDef>) -> Function {
+pub fn generate_generic_spawn_fn(defs: &[EntityDef]) -> Function {
     let mut fn_gen = Function::new("spawn");
     fn_gen
         .arg("id", "ID")
@@ -127,7 +195,7 @@ fn get_view_from<'a>(
     })
 }
 
-pub fn generate_generic_view_fn(defs: &Vec<EntityDef>) -> Function {
+pub fn generate_generic_view_fn(defs: &[EntityDef]) -> Function {
     let mut fn_gen = Function::new("view");
     fn_gen.arg("id", "ID").arg("ctx", "&mut ggez::Context").arg("assets", "&mut crate::assets::AssetManager");
     fn_gen.ret("Option<(std::sync::Arc<crate::assets::ImageAsset>, crate::math::Size2f)>");

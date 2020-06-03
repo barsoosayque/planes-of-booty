@@ -7,12 +7,12 @@ use crate::{
     ui::ImGuiSystem,
 };
 use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
+use itertools::Itertools;
 use nphysics2d::{
     math::{Isometry, Velocity},
     ncollide2d::{pipeline::object::CollisionGroups, shape},
     object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
 };
-use itertools::Itertools;
 use specs::prelude::*;
 
 pub struct Game {
@@ -44,7 +44,7 @@ impl Game {
             .with(DirectionalSystem, "directional_system", &[])
             .with(DirectionalCollidersSystem::default(), "directional_colliders_system", &["directional_system"])
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
-            .with(PhysicSystem::default(), "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
+            .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(ContainerSinkSystem, "container_sink_system", &[])
@@ -159,10 +159,11 @@ impl EventHandler for Game {
                     }
                     // can't create entities while any storage is borrowed
                     if self.world.read_storage::<Inventory>().contains(e) {
-                        let items = items.into_iter().map(|id| item::spawn(id, &self.world, ctx, &mut assets)).collect_vec();
+                        let items =
+                            items.into_iter().map(|id| item::spawn(id, &self.world, ctx, &mut assets)).collect_vec();
                         if let Some(inventory) = self.world.write_storage::<Inventory>().get_mut(e) {
                             for item in items {
-                                 inventory.content.add(&self.world, item);
+                                inventory.content.add(&self.world, item);
                             }
                         }
                     }
@@ -209,7 +210,11 @@ impl EventHandler for Game {
                     let entity = self
                         .world
                         .create_entity_unchecked()
-                        .with(Transform { pos: def.pos, rotation: def.velocity.angle_from_x_axis(), ..Transform::default() })
+                        .with(Transform {
+                            pos: def.pos,
+                            rotation: def.velocity.angle_from_x_axis(),
+                            ..Transform::default()
+                        })
                         .with(DistanceLimited { limit: def.distance })
                         .with(DistanceCounter::default())
                         .with(DamageDealer { damage: def.damage.0, damage_type: def.damage.1 })

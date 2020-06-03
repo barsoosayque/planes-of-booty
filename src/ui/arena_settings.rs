@@ -34,7 +34,7 @@ impl ArenaSettingsWindow {
     }
 }
 impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for ArenaSettingsWindow {
-    fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, (data, is_opened): (&mut UiData<'a>, &mut bool)) {
+    fn build<'ctx>(&mut self, ui: &mut Ui, _: &mut UiContext<'ctx>, (data, is_opened): (&mut UiData<'a>, &mut bool)) {
         Window::new(im_str!("Arena settings"))
             .resizable(false)
             .focus_on_appearing(false)
@@ -55,7 +55,7 @@ impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for ArenaSettingsWindow {
                 });
                 if ui.button(im_str!("Load"), [300.0, 20.0]) {
                     if let Some(id) = self.selected_arena {
-                        arena::set(id, &mut data.arena, &mut data.spawn_queue);
+                        data.arena.change_to = Some(id);
                     }
                 }
                 ui.separator();

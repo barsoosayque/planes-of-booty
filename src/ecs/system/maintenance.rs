@@ -1,5 +1,5 @@
 use super::super::{component::*, resource::*, tag};
-use crate::{math::*, read_event, ui::system::ImGuiSystem};
+use crate::{arena, math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use itertools::Itertools;
 use nphysics2d::{
@@ -13,9 +13,28 @@ use std::ops::DerefMut;
 
 pub struct ArenaSystem;
 impl<'a> System<'a> for ArenaSystem {
-    type SystemData = (WriteExpect<'a, PhysicWorld>, Write<'a, Arena>);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, Transform>,
+        ReadStorage<'a, tag::Player>,
+        WriteStorage<'a, tag::PendingDestruction>,
+        WriteExpect<'a, PhysicWorld>,
+        Write<'a, Arena>,
+        Write<'a, SpawnQueue>,
+    );
 
-    fn run(&mut self, (mut world, mut arena): Self::SystemData) {
+    fn run(
+        &mut self,
+        (entities, transforms, player, mut to_destruct, mut world, mut arena, mut spawn_queue): Self::SystemData,
+    ) {
+        if let Some(id) = arena.change_to.take() {
+            // clear old entities
+            for (e, _, _) in (&entities, &transforms, !&player).join() {
+                to_destruct.insert(e, tag::PendingDestruction).unwrap();
+            }
+            arena::set(id, arena.deref_mut(), spawn_queue.deref_mut());
+        }
+
         let size = arena.size;
         for (i, border) in arena.borders.iter_mut().enumerate() {
             let handle = match border {
@@ -247,10 +266,8 @@ impl<'a> System<'a> for ImpactDamageSystem {
         use nphysics2d::ncollide2d::pipeline::narrow_phase::ContactEvent;
         for contact in physic_world.geometry_world.contact_events() {
             if let ContactEvent::Started(handle1, handle2) = contact {
-                let (entity1, entity2) = (
-                    physic_world.entity_for_collider(&handle1),
-                    physic_world.entity_for_collider(&handle2)
-                );
+                let (entity1, entity2) =
+                    (physic_world.entity_for_collider(&handle1), physic_world.entity_for_collider(&handle2));
 
                 let damage = Self::impact_factor(
                     &entity1.and_then(|e| movements.get(*e)).map(|m| m.velocity).unwrap_or(Vec2f::zero()),
@@ -310,14 +327,25 @@ impl<'a> System<'a> for DamageSystem {
 
 pub struct DestructionSystem;
 impl<'a> System<'a> for DestructionSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, tag::PendingDestruction>, WriteStorage<'a, Target>);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, tag::PendingDestruction>,
+        WriteStorage<'a, Target>,
+        ReadStorage<'a, Physic>,
+        WriteExpect<'a, PhysicWorld>,
+    );
 
-    fn run(&mut self, (entities, to_destruct, mut targets): Self::SystemData) {
+    fn run(&mut self, (entities, to_destruct, mut targets, physics, mut physic_world): Self::SystemData) {
         for (e, _) in (&entities, &to_destruct).join() {
             for t in (&mut targets).join() {
                 if t.target == Some(e) {
                     t.target.take();
                 }
+            }
+
+            if let Some(physic) = physics.get(e) {
+                physic_world.colliders.remove(physic.collide.0);
+                physic_world.bodies.remove(physic.body);
             }
 
             entities.delete(e).unwrap();
