@@ -16,6 +16,8 @@ mod entity;
 mod game;
 mod item;
 mod particle;
+mod main_menu;
+mod scene;
 mod shader;
 mod ui;
 
@@ -50,8 +52,9 @@ fn run() -> Result<()> {
         .add_resource_path("resources")
         .build()?;
 
-    let mut instance = game::Game::new(&mut ctx);
-    event::run(&mut ctx, &mut event_loop, &mut instance).map_err(|err| anyhow::Error::new(err))
+    let mut scene_manager = scene::SceneManager::new();
+    scene_manager.send_command(scene::SceneCommand::Push(|ctx| Box::new(main_menu::MainMenu::new(ctx))));
+    event::run(&mut ctx, &mut event_loop, &mut scene_manager).map_err(|err| anyhow::Error::new(err))
 }
 
 fn main() {

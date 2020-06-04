@@ -4,6 +4,7 @@ use crate::{
     entity, item,
     math::*,
     particle,
+    scene::{Scene, SceneCommand},
     ui::ImGuiSystem,
 };
 use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
@@ -111,6 +112,11 @@ impl Game {
     }
 }
 
+impl Scene for Game {
+    fn next_command(&self) -> Option<SceneCommand> { None }
+
+    fn draw_prev(&self) -> bool { false }
+}
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         // TODO: Move all of this to some system
