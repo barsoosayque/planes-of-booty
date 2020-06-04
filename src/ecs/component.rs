@@ -72,11 +72,15 @@ pub struct Hotbar {
     pub content: [ItemBox; 4],
 }
 
-#[derive(Default, Debug, Component)]
+#[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct Weaponry {
     pub primary: ItemBox,
     pub secondary: ItemBox,
+    pub damage_multiplier: f32,
+}
+impl Default for Weaponry {
+    fn default() -> Self { Self { primary: None, secondary: None, damage_multiplier: 1.0 } }
 }
 
 pub type ItemBox = Option<Entity>;
@@ -233,7 +237,7 @@ pub type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 pub struct Transform {
     pub pos: Vec2f,
     pub rotation: Angle2f,
-    pub mirror: bool
+    pub mirror: bool,
 }
 
 #[derive(Default, Debug, Component)]
@@ -368,6 +372,20 @@ pub struct DamageReciever {
     pub damage_queue: Vec<(u32, DamageType)>,
     pub damage_immunity: EnumMap<DamageType, Option<f32>>,
 }
+impl DamageReciever {
+    /// Use this to update immunity safely: if there is already an
+    /// immunity to given type, it will update time if it's greater
+    pub fn update_immunity(&mut self, damage_type: DamageType, seconds: f32) {
+        match self.damage_immunity[damage_type] {
+            Some(time) => {
+                if time < seconds {
+                    self.damage_immunity[damage_type].replace(seconds);
+                }
+            },
+            None => self.damage_immunity[damage_type] = Some(seconds),
+        }
+    }
+}
 
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
@@ -382,6 +400,8 @@ pub enum DamageType {
     Lightning,
     Fire,
 }
+pub const DAMAGE_TYPES: [DamageType; 4] =
+    [DamageType::Physical, DamageType::Impact, DamageType::Lightning, DamageType::Fire];
 
 #[derive(Component)]
 #[storage(VecStorage)]

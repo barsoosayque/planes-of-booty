@@ -156,6 +156,7 @@ impl<'a> System<'a> for WeaponrySystem {
                                 .and_then(|b| b.downcast_mut::<RigidBody<f32>>()),
                             shooter_damage_reciever: dmg_rec_opt,
                             shooting_at: transform.pos,
+                            damage_multiplier: weaponry.damage_multiplier,
                             prop: prop,
                             projectiles: spawn_queue.deref_mut(),
                         };

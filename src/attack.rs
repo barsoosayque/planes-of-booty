@@ -18,6 +18,7 @@ pub struct AttackPatternData<'a> {
     pub shooter_faction: Option<&'a FactionId>,
     pub shooter_body: Option<&'a mut RigidBody<f32>>,
     pub shooter_damage_reciever: Option<&'a mut DamageReciever>,
+    pub damage_multiplier: f32,
     pub prop: &'a mut WeaponProperties,
     pub projectiles: &'a mut dyn ProjectileBuilder,
 }
@@ -86,7 +87,7 @@ impl AttackPattern for Ram {
             body.apply_force(0, &Force::linear([throw.x, throw.y].into()), ForceType::VelocityChange, true);
         }
         if let Some(dmg_rec) = &mut data.shooter_damage_reciever {
-            dmg_rec.damage_immunity[DamageType::Impact].replace(0.8);
+            dmg_rec.update_immunity(DamageType::Impact, 0.8);
         }
     }
 }
@@ -104,7 +105,7 @@ impl AttackPattern for Slingshot {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -127,7 +128,7 @@ impl AttackPattern for Railgun {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -155,7 +156,7 @@ impl AttackPattern for Crossbow {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/bolt.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -183,7 +184,7 @@ impl AttackPattern for Cannon {
         }
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE,
             pos: data.shooting_at,
@@ -220,7 +221,7 @@ impl AttackPattern for Shotgun {
             let pellet_normal = with_angle_offset(corrected, angle_offset);
             let def = ProjectileDef {
                 asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
                 velocity: pellet_normal * Self::PROJECTILE_VELOCITY_FLAT,
                 distance: Self::DISTANCE,
                 pos: data.shooting_at,
@@ -247,7 +248,7 @@ impl AttackPattern for Split {
     fn attack(&self, data: &mut AttackPatternData) {
         let def = ProjectileDef {
             asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: (data.prop.damage, DamageType::Physical),
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
             velocity: with_accuracy(data.prop.shooting_normal, data.prop.accuracy) * Self::PROJECTILE_VELOCITY_FLAT,
             distance: Self::DISTANCE_FIRST,
             pos: data.shooting_at,

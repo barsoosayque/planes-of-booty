@@ -1,0 +1,14 @@
+components:
+    Sprite:
+        asset: { single: { image: "/sprites/item/coconut.png" } }
+        size: { width: 50.0, height: 50.0 }
+    Consumable:
+        behaviour: { consumable_behaviour: "coconut" }
+    Named:
+        name: "Coconut cocktail"
+        description: "Rolling around at the speed of sound."
+    Quality:
+        rarity: { rarity: "common" }
+    Stackable:
+        stack_size: 4
+        __default: true

@@ -1,0 +1,14 @@
+components:
+    Sprite:
+        asset: { single: { image: "/sprites/item/starfruit.png" } }
+        size: { width: 50.0, height: 50.0 }
+    Consumable:
+        behaviour: { consumable_behaviour: "starfruit" }
+    Named:
+        name: "Starfruit"
+        description: "Nanovitamins, son."
+    Quality:
+        rarity: { rarity: "rare" }
+    Stackable:
+        stack_size: 4
+        __default: true

@@ -1,0 +1,14 @@
+components:
+    Sprite:
+        asset: { single: { image: "/sprites/item/pitaya.png" } }
+        size: { width: 50.0, height: 50.0 }
+    Consumable:
+        behaviour: { consumable_behaviour: "pitaya" }
+    Named:
+        name: "Pitaya"
+        description: "Use a gun, and if that don't work... Use more gun."
+    Quality:
+        rarity: { rarity: "common" }
+    Stackable:
+        stack_size: 4
+        __default: true
