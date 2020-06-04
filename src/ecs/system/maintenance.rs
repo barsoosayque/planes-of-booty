@@ -212,6 +212,9 @@ impl<'a> System<'a> for InputsSystem {
 
             for key in &inputs.clicked_keys {
                 match key {
+                    KeyCode::Escape => {
+                        ui.pause.is_opened = !ui.pause.is_opened;
+                    }
                     KeyCode::I => {
                         ui.inventory_window.show_inventories_for.insert(e);
                     },

@@ -2,12 +2,18 @@ use crate::{
     assets::*,
     ecs::{component::*, resource::*, system::*, tag},
     entity, item,
+    main_menu::MainMenu,
     math::*,
     particle,
     scene::{Scene, SceneCommand},
     ui::ImGuiSystem,
 };
-use ggez::{event::EventHandler, graphics, timer, Context, GameResult};
+use ggez::{
+    event::EventHandler,
+    graphics,
+    input::keyboard::{KeyCode, KeyMods},
+    timer, Context, GameResult,
+};
 use itertools::Itertools;
 use nphysics2d::{
     math::{Isometry, Velocity},
@@ -113,7 +119,16 @@ impl Game {
 }
 
 impl Scene for Game {
-    fn next_command(&self) -> Option<SceneCommand> { None }
+    fn next_command(&self) -> Option<SceneCommand> {
+        let ui = self.world.read_resource::<UiHub>();
+        if ui.pause.is_back {
+            Some(SceneCommand::ReplaceAll(|ctx| Box::new(MainMenu::new(ctx))))
+        } else if ui.pause.is_restart {
+            Some(SceneCommand::ReplaceAll(|ctx| Box::new(Self::new(ctx))))
+        } else {
+            None
+        }
+    }
 
     fn draw_prev(&self) -> bool { false }
 }
@@ -146,6 +161,8 @@ impl EventHandler for Game {
         // run ui system before any other system so it can
         // consume input events
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
+        if self.world.read_resource::<UiHub>().pause.is_opened { return Ok(()) }
+
         self.dispatcher.dispatch(&self.world);
         // shapeshifter is a special kind of system, as it requires
         // ggez context
@@ -270,6 +287,8 @@ impl EventHandler for Game {
     fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
         self.world.write_resource::<Inputs>().mouse_scroll = y;
     }
+
+    fn key_down_event(&mut self, _: &mut Context, _: KeyCode, _: KeyMods, _: bool) {}
 
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
         graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, width, height)).unwrap();
