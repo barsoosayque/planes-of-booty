@@ -102,7 +102,7 @@ impl<'a> System<'a> for SpriteRenderSystem<'_> {
                 let _lock = if blink_opt.is_some() {
                     let s = assets.get::<ShaderAsset<shader::Silhouette>>("/shaders/silhouette.frag", self.0).unwrap();
                     Some(graphics::use_shader(self.0, &s))
-                } else if interaction.near_inventory == Some(e) {
+                } else if interaction.near_inventory == Some(e) || interaction.near_level_changer == Some(e) {
                     let s = assets.get::<ShaderAsset<shader::Outline>>("/shaders/outline.frag", self.0).unwrap();
                     s.send(self.0, shader::Outline {
                         step: [4.0 / img.width() as f32, 4.0 / img.height() as f32],

@@ -24,6 +24,7 @@ pub struct DeltaTime(pub std::time::Duration);
 #[derive(Default, Debug)]
 pub struct InteractionCache {
     pub near_inventory: Option<Entity>,
+    pub near_level_changer: Option<Entity>,
 }
 
 #[derive(Debug)]

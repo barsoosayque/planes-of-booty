@@ -70,6 +70,7 @@ impl Game {
         world.insert(Arena::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
+        world.register::<tag::LevelChanger>();
         world.register::<Reflection>();
         world.register::<Shapeshifter>();
         world.register::<DistanceCounter>();

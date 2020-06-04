@@ -1,5 +1,5 @@
 use super::super::{component::*, resource::*, tag};
-use crate::{arena, math::*, read_event, ui::system::ImGuiSystem};
+use crate::{arena, entity, math::*, read_event, ui::system::ImGuiSystem};
 use ggez::input::{keyboard::KeyCode, mouse::MouseButton};
 use itertools::Itertools;
 use nphysics2d::{
@@ -7,7 +7,7 @@ use nphysics2d::{
     ncollide2d::shape::{Cuboid, ShapeHandle},
     object::{BodyPartHandle, BodyStatus, ColliderDesc, RigidBodyDesc},
 };
-use rand::{distributions::uniform::Uniform, thread_rng, Rng};
+use rand::{distributions::uniform::Uniform, seq::SliceRandom, thread_rng, Rng};
 use specs::prelude::*;
 use std::ops::DerefMut;
 
@@ -16,7 +16,9 @@ impl<'a> System<'a> for ArenaSystem {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, Transform>,
+        ReadStorage<'a, Faction>,
         ReadStorage<'a, tag::Player>,
+        ReadStorage<'a, tag::LevelChanger>,
         WriteStorage<'a, tag::PendingDestruction>,
         WriteExpect<'a, PhysicWorld>,
         Write<'a, Arena>,
@@ -25,8 +27,13 @@ impl<'a> System<'a> for ArenaSystem {
 
     fn run(
         &mut self,
-        (entities, transforms, player, mut to_destruct, mut world, mut arena, mut spawn_queue): Self::SystemData,
+        (entities, transforms, factions, player, lvl_changer, mut to_destruct, mut world, mut arena, mut spawn_queue): Self::SystemData,
     ) {
+        // if no enemies left and no portal yet, spawn portal
+        if !(&factions).join().any(|f| f.id != FactionId::Good) && (&lvl_changer).join().next().is_none() {
+            spawn_queue.0.push_back(SpawnItem::Entity(entity::ID::Swirl, Point2f::zero(), vec![]));
+        }
+
         if let Some(id) = arena.change_to.take() {
             // clear old entities
             for (e, _, _) in (&entities, &transforms, !&player).join() {
@@ -127,9 +134,10 @@ impl<'a> System<'a> for InteractionSystem {
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Inventory>,
         ReadStorage<'a, tag::Player>,
+        ReadStorage<'a, tag::LevelChanger>,
     );
 
-    fn run(&mut self, (entities, mut interaction, transforms, inventories, tag): Self::SystemData) {
+    fn run(&mut self, (entities, mut interaction, transforms, inventories, tag, lvl_changer): Self::SystemData) {
         for (transform, _) in (&transforms, &tag).join() {
             let near_inventory = (&entities, &inventories, &transforms, !&tag)
                 .join()
@@ -137,6 +145,13 @@ impl<'a> System<'a> for InteractionSystem {
                 .filter(|(_, distance)| *distance <= 50.0)
                 .fold1(|t1, t2| if t1.1 < t2.1 { t1 } else { t2 });
             interaction.near_inventory = near_inventory.map(|(e, _)| e);
+
+            let near_level_changer = (&entities, &transforms, &lvl_changer)
+                .join()
+                .map(|(e, t, _)| (e, (t.pos - transform.pos).length()))
+                .filter(|(_, distance)| *distance <= 50.0)
+                .fold1(|t1, t2| if t1.1 < t2.1 { t1 } else { t2 });
+            interaction.near_level_changer = near_level_changer.map(|(e, _)| e);
         }
     }
 }
@@ -147,6 +162,7 @@ impl<'a> System<'a> for InputsSystem {
         ReadStorage<'a, Transform>,
         WriteStorage<'a, Movement>,
         WriteExpect<'a, UiHub>,
+        WriteExpect<'a, Arena>,
         Read<'a, InteractionCache>,
         Read<'a, Inputs>,
         Read<'a, Camera>,
@@ -167,6 +183,7 @@ impl<'a> System<'a> for InputsSystem {
             transforms,
             mut movements,
             mut ui,
+            mut arena,
             interaction,
             inputs,
             camera,
@@ -201,6 +218,11 @@ impl<'a> System<'a> for InputsSystem {
                     KeyCode::E => {
                         if let Some(near_inventory_e) = interaction.near_inventory {
                             ui.inventory_window.show_inventories_for.insert(near_inventory_e);
+                        }
+                        if interaction.near_level_changer.is_some() {
+                            arena.difficulty += 0.5;
+                            let mut rng = thread_rng();
+                            arena.change_to.replace(*arena::IDS.choose(&mut rng).unwrap());
                         }
                     },
                     KeyCode::Key1 | KeyCode::Key2 | KeyCode::Key3 | KeyCode::Key4 => {
