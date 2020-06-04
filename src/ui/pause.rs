@@ -5,11 +5,9 @@ use imgui::*;
 #[derive(Default, Debug)]
 pub struct PauseWindow {
     pub is_opened: bool,
-    pub is_back: bool,
-    pub is_restart: bool,
 }
 impl<'a> UiBuilder<&mut UiData<'a>> for PauseWindow {
-    fn build<'ctx>(&mut self, ui: &mut Ui, _: &mut UiContext<'ctx>, _: &mut UiData<'a>) {
+    fn build<'ctx>(&mut self, ui: &mut Ui, _: &mut UiContext<'ctx>, data: &mut UiData<'a>) {
         if self.is_opened {
             ui.open_popup(im_str!("pause"))
         }
@@ -29,11 +27,11 @@ impl<'a> UiBuilder<&mut UiData<'a>> for PauseWindow {
                 }
                 ui.spacing();
                 if ui.button(im_str!("Restart"), [300.0, 50.0]) {
-                    self.is_restart = true;
+                    data.scene_controls.queue_restart = true;
                 }
                 ui.spacing();
                 if ui.button(im_str!("Exit"), [300.0, 50.0]) {
-                    self.is_back = true
+                    data.scene_controls.queue_exit = true
                 }
             });
         token.pop(ui);

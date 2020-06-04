@@ -73,7 +73,7 @@ impl Game {
         world.insert(UiHub::default());
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
-        world.insert(Settings::default());
+        world.insert(SceneControls::default());
         world.insert(Arena::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
@@ -120,10 +120,10 @@ impl Game {
 
 impl Scene for Game {
     fn next_command(&self) -> Option<SceneCommand> {
-        let ui = self.world.read_resource::<UiHub>();
-        if ui.pause.is_back {
+        let scene_controls = self.world.read_resource::<SceneControls>();
+        if scene_controls.queue_exit {
             Some(SceneCommand::ReplaceAll(|ctx| Box::new(MainMenu::new(ctx))))
-        } else if ui.pause.is_restart {
+        } else if scene_controls.queue_restart {
             Some(SceneCommand::ReplaceAll(|ctx| Box::new(Self::new(ctx))))
         } else {
             None
@@ -264,19 +264,19 @@ impl EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let settings = self.world.read_resource::<Settings>();
+        let scene_controls = self.world.read_resource::<SceneControls>();
         self.world.write_resource::<Camera>().apply(ctx);
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0x7cd6d4));
         MapRenderingSystem(ctx).run_now(&self.world);
-        if settings.is_debug_info {
+        if scene_controls.is_debug_info {
             DebugInfoRenderSystem(ctx).run_now(&self.world);
         }
-        if settings.is_debug_targeting {
+        if scene_controls.is_debug_targeting {
             DebugTargetRenderSystem(ctx).run_now(&self.world);
         }
         ParticleRenderSystem(ctx).run_now(&self.world);
         SpriteRenderSystem(ctx).run_now(&self.world);
-        if settings.is_debug_physic {
+        if scene_controls.is_debug_physic {
             DebugPhysicRenderSystem(ctx).run_now(&self.world);
         }
         self.world.write_resource::<Camera>().revert(ctx);

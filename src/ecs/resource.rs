@@ -129,10 +129,12 @@ pub struct Inputs {
 }
 
 #[derive(Default, Debug)]
-pub struct Settings {
+pub struct SceneControls {
     pub is_debug_info: bool,
     pub is_debug_targeting: bool,
     pub is_debug_physic: bool,
+    pub queue_restart: bool,
+    pub queue_exit: bool,
 }
 
 #[derive(SystemData)]
@@ -160,7 +162,7 @@ pub struct UiData<'a> {
     pub arena: Write<'a, Arena>,
     pub spawn_queue: Write<'a, SpawnQueue>,
     pub inputs: Write<'a, Inputs>,
-    pub settings: Write<'a, Settings>,
+    pub scene_controls: Write<'a, SceneControls>,
     pub assets: Write<'a, AssetManager>,
     pub camera: Read<'a, Camera>,
 }
@@ -168,6 +170,7 @@ pub struct UiData<'a> {
 pub struct UiHub {
     pub menu: Menu,
     pub pause: PauseWindow,
+    pub game_over: GameOverWindow,
     pub hud: Hud,
     pub debug_window: DebugWindow,
     pub inventory_window: InventoryWindow,
@@ -185,6 +188,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
         self.inventory_window.build(ui, ctx, data);
         self.hud.build(ui, ctx, data);
         self.pause.build(ui, ctx, data);
+        self.game_over.build(ui, ctx, data);
     }
 }
 

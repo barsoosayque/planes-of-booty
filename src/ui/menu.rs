@@ -22,9 +22,9 @@ impl<'a> UiBuilder<&mut UiData<'a>> for Menu {
                 if ui.small_button(im_str!("Arena settings")) {
                     self.is_show_arena_settings = !self.is_show_arena_settings;
                 }
-                ui.checkbox(im_str!("Render debug info"), &mut data.settings.is_debug_info);
-                ui.checkbox(im_str!("Render targeting"), &mut data.settings.is_debug_targeting);
-                ui.checkbox(im_str!("Render physic"), &mut data.settings.is_debug_physic);
+                ui.checkbox(im_str!("Render debug info"), &mut data.scene_controls.is_debug_info);
+                ui.checkbox(im_str!("Render targeting"), &mut data.scene_controls.is_debug_targeting);
+                ui.checkbox(im_str!("Render physic"), &mut data.scene_controls.is_debug_physic);
             });
         });
     }

@@ -6,7 +6,9 @@ pub mod system;
 pub mod arena_settings;
 pub mod main_menu;
 pub mod pause;
+pub mod game_over;
 
+pub use game_over::GameOverWindow;
 pub use pause::PauseWindow;
 pub use main_menu::MainMenu;
 pub use arena_settings::ArenaSettingsWindow;

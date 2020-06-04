@@ -380,9 +380,11 @@ impl<'a> System<'a> for DestructionSystem {
 
 pub struct UiSystem<'a>(pub &'a mut ggez::Context, pub &'a mut ImGuiSystem);
 impl<'s> System<'s> for UiSystem<'_> {
-    type SystemData = (UiData<'s>, Read<'s, DeltaTime>, Write<'s, UiHub>);
+    type SystemData = (UiData<'s>, Read<'s, DeltaTime>, Write<'s, UiHub>, ReadStorage<'s, tag::Player>);
 
-    fn run(&mut self, (mut data, dt, mut hub): Self::SystemData) {
+    fn run(&mut self, (mut data, dt, mut hub, tag): Self::SystemData) {
+        hub.game_over.is_opened = (&tag).join().next().is_none();
+
         let (ctx, imgui) = (&mut self.0, &mut self.1);
         if imgui.update(ctx, dt.0, hub.deref_mut(), &mut data) {
             data.inputs.mouse_clicked.remove(&MouseButton::Left);
