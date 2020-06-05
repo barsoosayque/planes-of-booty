@@ -142,6 +142,7 @@ pub struct UiData<'a> {
     pub entities: Entities<'a>,
     pub reflections: ReadStorage<'a, Reflection>,
     pub player_tag: ReadStorage<'a, tag::Player>,
+    pub to_destruct: WriteStorage<'a, tag::PendingDestruction>,
 
     pub inventories: WriteStorage<'a, Inventory>,
     pub weaponries: WriteStorage<'a, Weaponry>,

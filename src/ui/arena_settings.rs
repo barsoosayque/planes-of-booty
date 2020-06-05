@@ -1,7 +1,7 @@
 use super::system::{UiBuilder, UiContext};
 use crate::{
     arena,
-    ecs::{component::*, resource::*},
+    ecs::{component::*, resource::*, tag},
 };
 use imgui::*;
 use specs::Join;
@@ -41,6 +41,13 @@ impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for ArenaSettingsWindow {
             .opened(is_opened)
             .size([0.0, 0.0], Condition::Once)
             .build(ui, || {
+                if ui.button(im_str!("Kill all"), [300.0, 20.0]) {
+                    for (e, _, _) in (&data.entities, &data.transforms, !&data.player_tag).join() {
+                        data.to_destruct.insert(e, tag::PendingDestruction).unwrap();
+                    }
+                }
+                ui.separator();
+                ui.text(im_str!("Arena settings"));
                 ui.drag_float(im_str!("Width"), &mut data.arena.size.width).min(0.0).build();
                 ui.drag_float(im_str!("Height"), &mut data.arena.size.height).min(0.0).build();
                 ui.separator();

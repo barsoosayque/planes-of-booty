@@ -174,3 +174,45 @@ impl ShapeshifterForm for WhaleCooldown {
         });
     }
 }
+
+struct MimicSleep;
+impl ShapeshifterForm for MimicSleep {
+    fn time(&self) -> f32 { 0.0 }
+
+    fn can_update(&self, e: Entity, world: &World) -> bool {
+        world.read_storage::<component::Target>().get(e).and_then(|t| t.target).is_some()
+    }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/chest-closed.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(40.0, 37.0),
+        });
+        // make immune so sniper rifle wouldn't just kill it right after spawn
+        update.exec(move |world| {
+            if let Some(dmg_reciever) = world.write_storage::<component::DamageReciever>().get_mut(e) {
+                for damage_type in &component::DAMAGE_TYPES {
+                    dmg_reciever.update_immunity(*damage_type, 0.5);
+                }
+            }
+        });
+    }
+}
+
+struct MimicAttack;
+impl ShapeshifterForm for MimicAttack {
+    fn time(&self) -> f32 { 0.0 }
+
+    fn can_update(&self, e: Entity, world: &World) -> bool {
+        world.read_storage::<component::Target>().get(e).and_then(|t| t.target).is_none()
+    }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/chest-funny.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(50.0, 37.0),
+        });
+    }
+}

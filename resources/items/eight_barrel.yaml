@@ -13,7 +13,7 @@ components:
             attack_pattern: "shotgun"
             projectile: "/sprites/projectile/simple.png"
             projectile_size: { width: 10.0, height: 10.0 }
-            distance: 350.0,
+            distance: 350.0
             pellets: 8
             recoil: 10.0
     RandomizedWeaponProperties:
