@@ -440,6 +440,12 @@ pub struct DropTable {
     pub assigned_drops: Map<item::ID, u16>,
 }
 
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct AvoidShots {
+    pub count: u8
+}
+
 /////////////
 // Utility //
 /////////////

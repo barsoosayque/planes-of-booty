@@ -22,6 +22,33 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub struct ShotsDodgerSystem;
+impl<'a> System<'a> for ShotsDodgerSystem {
+    type SystemData = (Entities<'a>, WriteStorage<'a, DamageReciever>, WriteStorage<'a, AvoidShots>, WriteStorage<'a, Transform>);
+
+    fn run(&mut self, (entities, mut dmg_recs, mut dodgers, mut transforms): Self::SystemData) {
+        let mut to_remove: Vec<_> = vec![];
+        for (e, dmg_rec, avoid, transform) in (&entities, &mut dmg_recs, &mut dodgers, &mut transforms).join() {
+            if dmg_rec.damage_queue.iter().any(|(_, dmg_type)| dmg_rec.damage_immunity[*dmg_type].is_none()) {
+                if avoid.count > 0 {
+                    let mut rng = thread_rng();
+                    avoid.count -= 1;
+                    transform.pos += Vec2f::new(rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)).normalize() * 50.0;
+                    for damage_type in &DAMAGE_TYPES {
+                        dmg_rec.update_immunity(*damage_type, 0.5);
+                    }
+                    dmg_rec.damage_queue.clear();
+                } else {
+                    to_remove.push(e);
+                }
+            }
+        }
+        for e in to_remove {
+            dodgers.remove(e);
+        }
+    }
+}
+
 pub struct ConsumablesSystem;
 impl<'a> System<'a> for ConsumablesSystem {
     type SystemData = (Entities<'a>, Read<'a, DeltaTime>, Read<'a, LazyUpdate>, WriteStorage<'a, Consumer>);

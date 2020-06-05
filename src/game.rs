@@ -60,7 +60,8 @@ impl Game {
             .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
-            .with(DamageSystem, "damage_system", &["projectile_system", "impact_damage_system"])
+            .with(ShotsDodgerSystem, "shots_dodger_system", &["projectile_system", "impact_damage_system"])
+            .with(DamageSystem, "damage_system", &["shots_dodger_system", "projectile_system", "impact_damage_system"])
             // barrier for "on destruction" systems
             .with_barrier()
             .with(ExplodeOnDeathSystem, "explode_on_death_system", &[])
@@ -78,6 +79,7 @@ impl Game {
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();
         world.register::<tag::LevelChanger>();
+        world.register::<AvoidShots>();
         world.register::<Reflection>();
         world.register::<Shapeshifter>();
         world.register::<DistanceCounter>();
