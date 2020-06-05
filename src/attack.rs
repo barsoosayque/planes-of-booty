@@ -1,5 +1,5 @@
 use crate::{
-    ecs::component::{CollisionGroup, FactionId, WeaponProperties, DamageReciever, DamageType},
+    ecs::component::{CollisionGroup, DamageReciever, DamageType, FactionId, WeaponProperties},
     math::*,
 };
 use nphysics2d::{
@@ -34,9 +34,11 @@ pub struct ProjectileData<'a> {
     pub projectiles: &'a mut dyn ProjectileBuilder,
 }
 
+#[derive(Default)]
 pub struct ProjectileDef {
     pub asset: String,
     pub damage: (u32, DamageType),
+    pub rotate_projectile: bool,
     pub velocity: Vec2f,
     pub distance: f32,
     pub pos: Vec2f,
@@ -56,10 +58,13 @@ pub trait ProjectileBehaviour: Sync + Send {
 }
 
 fn exclude_shooter(shooter: Option<&FactionId>) -> Vec<CollisionGroup> {
-    match shooter {
-        Some(&FactionId::Good) => vec![CollisionGroup::Players],
-        Some(&FactionId::Pirates) | Some(&FactionId::Crabs) => vec![CollisionGroup::Enemies],
-        _ => vec![],
+    if let Some(id) = shooter {
+        match id {
+            &FactionId::Good => vec![CollisionGroup::Players],
+            &FactionId::Pirates | &FactionId::Crabs | &FactionId::Mythical => vec![CollisionGroup::Enemies],
+        }
+    } else {
+        vec![]
     }
 }
 fn with_accuracy(normal: Vec2f, accuracy: f32) -> Vec2f {
@@ -74,12 +79,10 @@ fn with_angle_offset(normal: Vec2f, angle: Angle2f) -> Vec2f {
 }
 
 pub struct Ram {
-    pub power: f32
+    pub power: f32,
 }
 impl AttackPattern for Ram {
-    fn description(&self) -> &str {
-        "Throw yourself into the battle with full impact damage negotiation."
-    }
+    fn description(&self) -> &str { "Throw yourself into the battle with full impact damage negotiation." }
 
     fn attack(&self, data: &mut AttackPatternData) {
         if let Some(body) = &mut data.shooter_body {
@@ -111,7 +114,7 @@ impl AttackPattern for Slingshot {
             pos: data.shooting_at,
             size: Size2f::new(10.0, 10.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
-            behaviour: None,
+            ..ProjectileDef::default()
         };
         data.projectiles.build(def);
     }
@@ -135,14 +138,13 @@ impl AttackPattern for Railgun {
             size: Size2f::new(8.0, 8.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
             behaviour: Some(Box::new(Self)),
+            ..ProjectileDef::default()
         };
         data.projectiles.build(def);
     }
 }
 impl ProjectileBehaviour for Railgun {
-    fn on_hit<'a>(&self, _: &mut ProjectileData<'a>) -> bool {
-        false
-    }
+    fn on_hit<'a>(&self, _: &mut ProjectileData<'a>) -> bool { false }
 }
 
 pub struct Crossbow;
@@ -162,7 +164,8 @@ impl AttackPattern for Crossbow {
             pos: data.shooting_at,
             size: Size2f::new(15.0, 7.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
-            behaviour: None,
+            rotate_projectile: true,
+            ..ProjectileDef::default()
         };
         data.projectiles.build(def);
     }
@@ -190,20 +193,22 @@ impl AttackPattern for Cannon {
             pos: data.shooting_at,
             size: Size2f::new(10.0, 10.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
-            behaviour: None,
+            ..ProjectileDef::default()
         };
         data.projectiles.build(def);
     }
 }
 
 pub struct Shotgun {
+    pub projectile: &'static str,
+    pub projectile_size: Size2f,
+    pub distance: f32,
     pub pellets: u8,
-    pub recoil: f32
+    pub recoil: f32,
 }
 impl Shotgun {
     const ANGLE_LEFT_RAD: f32 = -0.392687;
     const ANGLE_RIGHT_RAD: f32 = 0.392687;
-    const DISTANCE: f32 = 350.0;
     const PROJECTILE_VELOCITY_FLAT: f32 = 300.0;
 }
 impl AttackPattern for Shotgun {
@@ -220,14 +225,14 @@ impl AttackPattern for Shotgun {
             let angle_offset = left.lerp(right, i as f32 / (self.pellets as f32 - 1.0));
             let pellet_normal = with_angle_offset(corrected, angle_offset);
             let def = ProjectileDef {
-                asset: "/sprites/projectile/simple.png".to_owned(),
-            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
+                asset: self.projectile.to_owned(),
+                damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Physical),
                 velocity: pellet_normal * Self::PROJECTILE_VELOCITY_FLAT,
-                distance: Self::DISTANCE,
+                distance: self.distance,
                 pos: data.shooting_at,
-                size: Size2f::new(10.0, 10.0),
+                size: self.projectile_size,
                 ignore_groups: exclude_shooter(data.shooter_faction),
-                behaviour: None,
+                ..ProjectileDef::default()
             };
             data.projectiles.build(def);
         }
@@ -255,6 +260,7 @@ impl AttackPattern for Split {
             size: Size2f::new(10.0, 10.0),
             ignore_groups: exclude_shooter(data.shooter_faction),
             behaviour: Some(Box::new(Self)),
+            ..ProjectileDef::default()
         };
         data.projectiles.build(def);
     }
@@ -274,7 +280,7 @@ impl ProjectileBehaviour for Split {
                 pos: data.pos.clone(),
                 size: data.size.clone(),
                 ignore_groups: data.ignore_groups.clone(),
-                behaviour: None,
+                ..ProjectileDef::default()
             };
             data.projectiles.build(def);
         }

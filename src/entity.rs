@@ -121,3 +121,56 @@ impl ShapeshifterForm for CrabJrShockedForm {
         update.remove::<component::ShootTarget>(e);
     }
 }
+
+struct WhaleWait;
+impl ShapeshifterForm for WhaleWait {
+    fn time(&self) -> f32 { 4.0 }
+
+    fn can_update(&self, e: Entity, world: &World) -> bool {
+        world.read_storage::<component::Target>().get(e).map(|t| t.target.is_some()).unwrap_or(true)
+    }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/whale.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(200.0, 118.0),
+        });
+        update.insert(e, component::FollowTarget { keep_distance: 300.0, follow_distance: 600.0 });
+    }
+
+    fn on_end(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        update.remove::<component::FollowTarget>(e);
+    }
+}
+
+struct WhaleAttack;
+impl ShapeshifterForm for WhaleAttack {
+    fn time(&self) -> f32 { 0.25 }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/whale-splash.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(200.0, 118.0),
+        });
+        update.insert(e, component::ShootTarget { radius: 500.0 });
+    }
+
+    fn on_end(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        update.remove::<component::ShootTarget>(e);
+    }
+}
+
+struct WhaleCooldown;
+impl ShapeshifterForm for WhaleCooldown {
+    fn time(&self) -> f32 { 0.25 }
+
+    fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
+        let new_asset = assets.get::<ImageAsset>("/sprites/entity/whale.png", ctx).unwrap();
+        update.insert(e, component::Sprite {
+            asset: component::SpriteAsset::Single { value: new_asset },
+            size: Size2f::new(200.0, 118.0),
+        });
+    }
+}

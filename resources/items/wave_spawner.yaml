@@ -1,0 +1,17 @@
+# This is weapon for whale, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: 
+            attack_pattern: "shotgun"
+            projectile: "/sprites/projectile/wave.png"
+            projectile_size: { width: 40.0, height: 40.0 }
+            distance: 500.0
+            pellets: 5
+            recoil: 0.0
+    WeaponProperties:
+        damage: 10 
+        accuracy: 0.9
+        clip_size: 1
+        clip: 1
+        reloading_time: 0.5
+        __default: true

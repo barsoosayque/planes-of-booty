@@ -558,7 +558,7 @@ impl<'a> System<'a> for ExplodeOnDeathSystem {
     fn run(&mut self, (mut spawn_queue, faction, transform, to_destruct): Self::SystemData) {
         for (faction, transform, _) in (&faction, &transform, &to_destruct).join() {
             match faction.id {
-                FactionId::Crabs => {
+                FactionId::Crabs | FactionId::Mythical => {
                     spawn_queue.0.push_back(SpawnItem::Particle(particle::ID::MediumSplash, transform.pos.to_point()));
                 }
                 FactionId::Pirates | FactionId::Good => {

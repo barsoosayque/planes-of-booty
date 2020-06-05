@@ -161,7 +161,9 @@ impl EventHandler for Game {
         // run ui system before any other system so it can
         // consume input events
         UiSystem(ctx, &mut self.imgui).run_now(&self.world);
-        if self.world.read_resource::<UiHub>().pause.is_opened { return Ok(()) }
+        if self.world.read_resource::<UiHub>().pause.is_opened {
+            return Ok(());
+        }
 
         self.dispatcher.dispatch(&self.world);
         // shapeshifter is a special kind of system, as it requires
@@ -236,7 +238,7 @@ impl EventHandler for Game {
                         .create_entity_unchecked()
                         .with(Transform {
                             pos: def.pos,
-                            rotation: def.velocity.angle_from_x_axis(),
+                            rotation: if def.rotate_projectile { def.velocity.angle_from_x_axis() } else { Angle2f::zero() },
                             ..Transform::default()
                         })
                         .with(DistanceLimited { limit: def.distance })

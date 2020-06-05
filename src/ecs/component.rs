@@ -307,6 +307,7 @@ pub enum FactionId {
     Good,
     Pirates,
     Crabs,
+    Mythical,
 }
 
 ///////////////
@@ -399,6 +400,9 @@ pub enum DamageType {
     Impact,
     Lightning,
     Fire,
+}
+impl Default for DamageType {
+    fn default() -> Self { Self::Physical }
 }
 pub const DAMAGE_TYPES: [DamageType; 4] =
     [DamageType::Physical, DamageType::Impact, DamageType::Lightning, DamageType::Fire];

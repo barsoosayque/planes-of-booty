@@ -173,14 +173,26 @@ impl PartValue {
                 }
             },
             PartValue::ShapeshifterForms(forms) => {
-                let (mut vars, mut lines): (Vec<_>, Vec<_>) = (vec![], vec![]);
-                for form in forms {
-                    if let PartValue::Str(struct_name) = form {
-                        let var_name = struct_name.to_shouty_snake_case();
-                        lines.push(format!("const {}: {} = {};", var_name, struct_name, struct_name));
-                        vars.push(format!("&{}", var_name));
-                    }
-                }
+                let (mut lines, vars): (Vec<_>, Vec<_>) = forms
+                    .iter()
+                    .filter_map(|form| {
+                        if let PartValue::Str(struct_name) = form {
+                            let var_name = struct_name.to_shouty_snake_case();
+                            Some((struct_name, var_name))
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|(struct_name, var_name)| {
+                        (
+                            (format!("const {}: {} = {};", var_name, struct_name, struct_name)),
+                            (format!("&{}", var_name)),
+                        )
+                    })
+                    .unzip();
+                lines.sort_unstable();
+                lines.dedup();
+
                 Some(format!(
                     "{}\nconst SHAPESHIFTER_FORMS: [&'static dyn component::ShapeshifterForm; {}] = [{}];",
                     lines.join("\n"),
