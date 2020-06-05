@@ -1,6 +1,6 @@
 use crate::{
-    game::Game,
     assets::AssetManager,
+    game::Game,
     scene::{Scene, SceneCommand},
     ui::{self, ImGuiSystem},
 };
@@ -19,7 +19,7 @@ impl MainMenu {
 }
 
 impl Scene for MainMenu {
-    fn next_command(&self) -> Option<SceneCommand> { 
+    fn next_command(&self) -> Option<SceneCommand> {
         if self.ui.is_play {
             Some(SceneCommand::ReplaceAll(|ctx| Box::new(Game::new(ctx))))
         } else {

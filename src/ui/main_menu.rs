@@ -1,13 +1,12 @@
 use super::system::{UiBuilder, UiContext};
-use crate::assets::*;
-use crate::{centered_text, within_window};
+use crate::{assets::*, centered_text, within_window};
 use imgui::*;
 
 #[derive(Default, Debug)]
 pub struct MainMenu {
     pub is_play: bool,
     pub is_how_to_play: bool,
-    pub is_exit: bool
+    pub is_exit: bool,
 }
 impl<'a> UiBuilder<&mut AssetManager> for MainMenu {
     fn build<'ctx>(&mut self, ui: &mut Ui, ctx: &mut UiContext<'ctx>, assets: &mut AssetManager) {

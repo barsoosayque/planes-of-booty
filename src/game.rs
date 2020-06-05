@@ -238,7 +238,11 @@ impl EventHandler for Game {
                         .create_entity_unchecked()
                         .with(Transform {
                             pos: def.pos,
-                            rotation: if def.rotate_projectile { def.velocity.angle_from_x_axis() } else { Angle2f::zero() },
+                            rotation: if def.rotate_projectile {
+                                def.velocity.angle_from_x_axis()
+                            } else {
+                                Angle2f::zero()
+                            },
                             ..Transform::default()
                         })
                         .with(DistanceLimited { limit: def.distance })
@@ -246,7 +250,10 @@ impl EventHandler for Game {
                         .with(DamageDealer { damage: def.damage.0, damage_type: def.damage.1 })
                         .with(Physic {
                             body: body,
-                            collide: (collider, CollideShapeHandle::Single { value: shape.clone() }),
+                            colliders: PhysicColliders {
+                                real: (collider, CollideShapeHandle::Single { value: shape.clone() }),
+                                hitbox: None,
+                            },
                         })
                         .with(Sprite {
                             asset: SpriteAsset::Single { value: assets.get::<ImageAsset>(&def.asset, ctx).unwrap() },

@@ -1,9 +1,6 @@
 use crate::codegen::*;
 use def::*;
-use std::{
-    fs,
-    path::{PathBuf},
-};
+use std::{fs, path::PathBuf};
 
 mod codegen;
 mod def;

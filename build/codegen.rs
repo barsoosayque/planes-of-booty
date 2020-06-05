@@ -98,7 +98,11 @@ pub fn generate_spawn_groups(spawn_groups: &[SpawnGroupDef]) -> Scope {
                 let mut v = Vec::with_capacity(size as usize);\
                 for _ in 0..=size {{ v.push({}_CHOICES[dist.sample(&mut rng)]) }}\
                 v }}",
-            grp.name.to_camel_case(), shouty, grp.start, grp.grow, shouty
+            grp.name.to_camel_case(),
+            shouty,
+            grp.start,
+            grp.grow,
+            shouty
         ));
     }
     fn_gen.line("}");
@@ -234,7 +238,12 @@ fn collect_init_and_fin(part: &PartValue, buffers: &mut (Set<String>, Set<String
             collect_init_and_fin(south, buffers);
         },
         PartValue::Single { value } => collect_init_and_fin(value, buffers),
-        PartValue::Collide { shape, .. } => collect_init_and_fin(shape, buffers),
+        PartValue::Collide { shape, hitbox, .. } => {
+            collect_init_and_fin(shape, buffers);
+            if let Some(hitbox) = hitbox {
+                collect_init_and_fin(hitbox, buffers);
+            }
+        },
         _ => (),
     }
 }

@@ -220,34 +220,35 @@ impl<'a> System<'a> for ProjectileSystem {
         use nphysics2d::ncollide2d::query::Proximity;
         for proximity in physic_world.geometry_world.proximity_events() {
             if proximity.new_status == Proximity::Intersecting {
-                let (entity1, entity2) = (
-                    physic_world.entity_for_collider(&proximity.collider1).unwrap(),
-                    physic_world.entity_for_collider(&proximity.collider2).unwrap(),
-                );
+                if let (Some(entity1), Some(entity2)) = (
+                    physic_world.entity_for_collider(&proximity.collider1),
+                    physic_world.entity_for_collider(&proximity.collider2),
+                ) {
+                    let (dmg_rec, dmg_deal, projectile, deal_e) =
+                        if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                            (dmg_recievers.get_mut(*entity1), dmg_dealers.get(*entity2), projectiles.get(*entity2))
+                        {
+                            (dmg_rec, dmg_deal, projectile, entity2)
+                        } else if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                            (dmg_recievers.get_mut(*entity2), dmg_dealers.get(*entity1), projectiles.get(*entity1))
+                        {
+                            (dmg_rec, dmg_deal, projectile, entity1)
+                        } else {
+                            continue;
+                        };
 
-                let (dmg_rec, dmg_deal, projectile, deal_e) = if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
-                    (dmg_recievers.get_mut(*entity1), dmg_dealers.get(*entity2), projectiles.get(*entity2))
-                {
-                    (dmg_rec, dmg_deal, projectile, entity2)
-                } else if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
-                    (dmg_recievers.get_mut(*entity2), dmg_dealers.get(*entity1), projectiles.get(*entity1))
-                {
-                    (dmg_rec, dmg_deal, projectile, entity1)
-                } else {
-                    continue;
-                };
-
-                dmg_rec.damage_queue.push((dmg_deal.damage, dmg_deal.damage_type));
-                let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
-                    (&projectile.def.behaviour, distances.get(*deal_e), transforms.get(*deal_e))
-                {
-                    let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
-                    behaviour.on_hit(&mut data)
-                } else {
-                    true
-                };
-                if consumed {
-                    to_destruct.insert(*deal_e, tag::PendingDestruction).unwrap();
+                    dmg_rec.damage_queue.push((dmg_deal.damage, dmg_deal.damage_type));
+                    let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
+                        (&projectile.def.behaviour, distances.get(*deal_e), transforms.get(*deal_e))
+                    {
+                        let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
+                        behaviour.on_hit(&mut data)
+                    } else {
+                        true
+                    };
+                    if consumed {
+                        to_destruct.insert(*deal_e, tag::PendingDestruction).unwrap();
+                    }
                 }
             }
         }
@@ -623,9 +624,15 @@ impl<'a> System<'a> for DirectionalCollidersSystem {
         read_event!(directionals, self.reader_id.as_mut().unwrap(); Modified => self.modified);
 
         for (direction, physic, _) in (&directionals, &mut physics, &self.modified).join() {
-            if let CollideShapeHandle::Directional { north, east, south, west } = &physic.collide.1 {
-                let collider = world.colliders.get_mut(physic.collide.0).unwrap();
+            if let CollideShapeHandle::Directional { north, east, south, west } = &physic.colliders.real.1 {
+                let collider = world.colliders.get_mut(physic.colliders.real.0).unwrap();
                 collider.set_shape(directional!(direction.direction => north, east, south, west).clone());
+            }
+            if let Some(hitbox) = &physic.colliders.hitbox {
+                if let CollideShapeHandle::Directional { north, east, south, west } = &hitbox.1 {
+                    let collider = world.colliders.get_mut(hitbox.0).unwrap();
+                    collider.set_shape(directional!(direction.direction => north, east, south, west).clone());
+                }
             }
         }
     }

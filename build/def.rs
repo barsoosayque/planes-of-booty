@@ -81,13 +81,40 @@ pub enum PartValue {
     ShapeshifterForms(Vec<PartValue>),
     Item(String),
     Range(Box<PartValue>, Box<PartValue>),
-    Directional { north: Box<PartValue>, east: Box<PartValue>, west: Box<PartValue>, south: Box<PartValue> },
-    Single { value: Box<PartValue> },
-    Size { width: f32, height: f32 },
-    Vec { x: f32, y: f32 },
-    Body { status: String, mass: f32 },
-    Box { uuid: Uuid, x: f32, y: f32, width: f32, height: f32 },
-    Collide { sensor: bool, collision_membership: Vec<PartValue>, shape: Box<PartValue> },
+    Directional {
+        north: Box<PartValue>,
+        east: Box<PartValue>,
+        west: Box<PartValue>,
+        south: Box<PartValue>,
+    },
+    Single {
+        value: Box<PartValue>,
+    },
+    Size {
+        width: f32,
+        height: f32,
+    },
+    Vec {
+        x: f32,
+        y: f32,
+    },
+    Body {
+        status: String,
+        mass: f32,
+    },
+    Box {
+        uuid: Uuid,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    Collide {
+        sensor: bool,
+        collision_membership: Vec<PartValue>,
+        shape: Box<PartValue>,
+        hitbox: Option<Box<PartValue>>,
+    },
 }
 
 impl std::fmt::Display for PartValue {
@@ -121,11 +148,17 @@ impl std::fmt::Display for PartValue {
                 north, east, south, west
             ),
             PartValue::Single { value } => write!(f, "component::DirOrSingle::Single{{value:{}}}", value),
-            PartValue::Size { width, height } => write!(f, "crate::math::Size2f::new({}f32, {}f32)", width, height),
-            PartValue::Vec { x, y } => write!(f, "crate::math::Vec2f::new({}f32, {}f32)", x, y),
+            PartValue::Size { width, height } => write!(f, "crate::math::Size2f::new({}f32,{}f32)", width, height),
+            PartValue::Vec { x, y } => write!(f, "crate::math::Vec2f::new({}f32,{}f32)", x, y),
             PartValue::Body { .. } => write!(f, "body"),
             PartValue::Box { uuid, .. } => write!(f, "box_{}.clone()", uuid.to_simple()),
-            PartValue::Collide { shape, .. } => write!(f, "(collider, {})", shape),
+            PartValue::Collide { shape, hitbox, .. } => {
+                if let Some(hitbox) = hitbox {
+                    write!(f, "component::PhysicColliders{{real:(collider,{}),hitbox:Some((hitbox,{}))}}", shape, hitbox)
+                } else {
+                    write!(f, "component::PhysicColliders{{real:(collider,{}),hitbox:None}}", shape)
+                }
+            },
         }
     }
 }
@@ -208,17 +241,40 @@ impl PartValue {
                 mass,
                 status.to_camel_case()
             )),
-            PartValue::Collide { sensor, collision_membership, shape } => {
-                let first_shape = match &**shape {
-                    PartValue::Single { value } => value,
-                    PartValue::Directional { north, .. } => north,
-                    _ => panic!("No valid shapes defined to create a collide"),
-                };
-
+            PartValue::Collide { sensor, collision_membership, shape, hitbox } => {
                 let collision_membership_str =
                     collision_membership.iter().map(|v| format!("{}", v)).collect::<Vec<String>>().join(",");
-                Some(format!(
-                    "let collider = world.write_resource::<resource::PhysicWorld>()\
+
+                let hitbox = if let Some(hitbox) = hitbox {
+                    let first_shape = match &**hitbox {
+                        PartValue::Single { value } => value,
+                        PartValue::Directional { north, .. } => north,
+                        _ => panic!("No valid shapes defined to create a hitbox"),
+                    };
+
+                    format!(
+                        "let hitbox = world.write_resource::<resource::PhysicWorld>()\
+                        .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
+                            .sensor(true)\
+                            .collision_groups(\
+                                nphysics2d::ncollide2d::pipeline::object::CollisionGroups::new()\
+                                .with_membership(&[component::CollisionGroup::Hitbox as usize, {}])\
+                            ).build(nphysics2d::object::BodyPartHandle(body, 0))\
+                        );\n",
+                        first_shape, collision_membership_str
+                    )
+                } else {
+                    "".to_owned()
+                };
+
+                let collider = {
+                    let first_shape = match &**shape {
+                        PartValue::Single { value } => value,
+                        PartValue::Directional { north, .. } => north,
+                        _ => panic!("No valid shapes defined to create a collide"),
+                    };
+                    format!(
+                        "let collider = world.write_resource::<resource::PhysicWorld>()\
                     .colliders.insert(nphysics2d::object::ColliderDesc::new({})\
                         .sensor({})\
                         .material(nphysics2d::material::MaterialHandle::new(\
@@ -229,8 +285,10 @@ impl PartValue {
                             .with_membership(&[{}])\
                         ).build(nphysics2d::object::BodyPartHandle(body, 0))\
                     );",
-                    first_shape, sensor, collision_membership_str
-                ))
+                        first_shape, sensor, collision_membership_str
+                    )
+                };
+                Some(format!("{}{}", hitbox, collider))
             },
             PartValue::Box { uuid, x, y, width, height } => Some(format!(
                 "let box_{} = nphysics2d::ncollide2d::shape::ShapeHandle::new(\
@@ -266,11 +324,17 @@ impl PartValue {
                     .set_user_data(Some(Box::new(entity)));"
                     .into(),
             ),
-            PartValue::Collide { .. } => Some(
+            PartValue::Collide { hitbox, .. } => Some(format!(
+                "{}{}",
                 "world.write_resource::<resource::PhysicWorld>().colliders.get_mut(collider).unwrap()\
-                    .set_user_data(Some(Box::new(entity)));"
-                    .into(),
-            ),
+                .set_user_data(Some(Box::new(entity)));",
+                if hitbox.is_some() {
+                    "\nworld.write_resource::<resource::PhysicWorld>().colliders.get_mut(hitbox).unwrap()\
+                .set_user_data(Some(Box::new(entity)));"
+                } else {
+                    ""
+                }
+            )),
             _ => None,
         }
     }
@@ -376,16 +440,24 @@ impl<'de> Visitor<'de> for PartValueVisitor {
                 width,
                 height,
             })
-        } else if let (Some(PartValue::Bool(sensor)), Some(shape), Some(PartValue::Seq(collision_membership))) =
-            (buffer.remove("sensor"), buffer.remove("shape"), buffer.remove("collision_membership"))
-        {
-            Ok(PartValue::Collide { sensor, collision_membership, shape: Box::new(shape) })
         } else if let Some(PartValue::Str(pattern)) = buffer.remove("attack_pattern") {
             Ok(PartValue::AttackPattern(pattern, buffer))
         } else if let Some(PartValue::Str(consumable)) = buffer.remove("consumable_behaviour") {
             Ok(PartValue::ConsumableBehaviour(consumable, buffer))
         } else if let (Some(start), Some(end)) = (buffer.remove("start"), buffer.remove("end")) {
             Ok(PartValue::Range(Box::new(start), Box::new(end)))
+        } else if let (Some(PartValue::Bool(sensor)), Some(shape), hitbox, Some(PartValue::Seq(collision_membership))) = (
+            buffer.remove("sensor"),
+            buffer.remove("shape"),
+            buffer.remove("hitbox"),
+            buffer.remove("collision_membership"),
+        ) {
+            Ok(PartValue::Collide {
+                sensor,
+                collision_membership,
+                shape: Box::new(shape),
+                hitbox: hitbox.map(|s| Box::new(s)),
+            })
         } else if let Some(PartValue::Seq(forms)) = buffer.remove("shapeshifter_forms") {
             Ok(PartValue::ShapeshifterForms(forms))
         } else {

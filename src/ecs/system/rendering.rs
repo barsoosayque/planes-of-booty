@@ -219,10 +219,20 @@ impl<'a> System<'a> for DebugPhysicRenderSystem<'_> {
         use nphysics2d::ncollide2d::shape::{ConvexPolygon, Cuboid};
         for (_, collider) in world.colliders.iter() {
             let body_pos = collider.position().translation.vector;
+            let groups = collider.collision_groups();
+            let color = if groups.is_member_of(CollisionGroup::Props as usize) {
+                0x05FC19AA
+            } else if groups.is_member_of(CollisionGroup::Projectiles as usize) {
+                0xA08BEDAA
+            } else if groups.is_member_of(CollisionGroup::Hitbox as usize) {
+                0xFFCA6DAA
+            } else {
+                0x05FC19AA
+            };
             if let Some(polygon) = collider.shape().as_shape::<ConvexPolygon<f32>>() {
                 let points: Vec<Point2f> =
                     polygon.points().iter().map(|p| Point2f::new(body_pos[0] + p[0], body_pos[1] + p[1])).collect();
-                render_polygon(self.0, &points, 0x05FC19AA);
+                render_polygon(self.0, &points, color);
             }
             if let Some(cuboid) = collider.shape().as_shape::<Cuboid<f32>>() {
                 let half_extents = cuboid.half_extents();
@@ -231,7 +241,7 @@ impl<'a> System<'a> for DebugPhysicRenderSystem<'_> {
                     // why div 2 ??????????????????????
                     &Point2f::new(body_pos[0] * 0.5, body_pos[1] * 0.5),
                     &Size2f::new(half_extents.x * 2.0, half_extents.y * 2.0),
-                    0x05FC19AA,
+                    color,
                 );
             }
         }

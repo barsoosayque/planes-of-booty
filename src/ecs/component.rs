@@ -228,7 +228,11 @@ pub struct WeaponProperties {
 #[storage(VecStorage)]
 pub struct Physic {
     pub body: DefaultBodyHandle,
-    pub collide: (DefaultColliderHandle, CollideShapeHandle),
+    pub colliders: PhysicColliders,
+}
+pub struct PhysicColliders {
+    pub real: (DefaultColliderHandle, CollideShapeHandle),
+    pub hitbox: Option<(DefaultColliderHandle, CollideShapeHandle)>,
 }
 pub type CollideShapeHandle = DirOrSingle<ShapeHandle<f32>>;
 
@@ -256,14 +260,16 @@ pub struct Movement {
 pub enum CollisionGroup {
     Players = 1,
     Enemies = 2,
-    Projectiles = 3,
-    Props = 4,
+    Props = 3,
+    Projectiles = 4,
+    Hitbox = 5,
 }
-pub const NO_COLLISION: [usize; 4] = [
+pub const NO_COLLISION: [usize; 5] = [
     CollisionGroup::Players as usize,
     CollisionGroup::Enemies as usize,
     CollisionGroup::Projectiles as usize,
     CollisionGroup::Props as usize,
+    CollisionGroup::Hitbox as usize,
 ];
 
 //////////////////////

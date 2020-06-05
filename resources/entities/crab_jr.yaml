@@ -5,18 +5,22 @@ components:
         time : 0.0
     Sprite:
         asset: { single: { image: "/sprites/entity/crab-jr-underwater.png" } }
-        size: { width: 150.0, height: 60.0 }
+        size: { width: 100.0, height: 40.0 }
     Physic:
         body: 
             status: "dynamic"
             mass: 3.0
-        collide:
+        colliders:
             collision_membership: [ { collision_group: "enemies" } ]
             sensor: false
             shape:
                 single:
-                    pos: { x: 22.0, y: 2.0 }
-                    size: { width: 50.0, height: 22.0 }
+                    pos: { x: 10.0, y: 4.5 }
+                    size: { width: 34.0, height: 10.0 }
+            hitbox:
+                single:
+                    pos: { x: 10.0, y: -4.0 }
+                    size: { width: 34.0, height: 18.0 }
     HealthPool:
         max_hp: 60
         hp: 60

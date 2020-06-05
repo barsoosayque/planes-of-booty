@@ -41,9 +41,7 @@ impl std::ops::Deref for ImageAsset {
     fn deref(&self) -> &Self::Target { &self.1 }
 }
 impl std::cmp::PartialEq for ImageAsset {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
+    fn eq(&self, other: &Self) -> bool { self.id() == other.id() }
 }
 impl AsRef<Image> for ImageAsset {
     fn as_ref(&self) -> &Image { &self.1 }

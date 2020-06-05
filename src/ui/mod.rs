@@ -1,21 +1,21 @@
+pub mod arena_settings;
 pub mod debug;
+pub mod game_over;
 pub mod hud;
 pub mod inventory;
-pub mod menu;
-pub mod system;
-pub mod arena_settings;
 pub mod main_menu;
+pub mod menu;
 pub mod pause;
-pub mod game_over;
+pub mod system;
 
-pub use game_over::GameOverWindow;
-pub use pause::PauseWindow;
-pub use main_menu::MainMenu;
 pub use arena_settings::ArenaSettingsWindow;
 pub use debug::DebugWindow;
+pub use game_over::GameOverWindow;
 pub use hud::Hud;
 pub use inventory::InventoryWindow;
+pub use main_menu::MainMenu;
 pub use menu::Menu;
+pub use pause::PauseWindow;
 pub use system::{ImGuiSystem, UiBuilder, UiContext};
 
 #[macro_export]

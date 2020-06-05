@@ -17,7 +17,10 @@ pub trait UiBuilder<D> {
     fn build<'ctx>(&mut self, ui: &mut imgui::Ui, ctx: &mut UiContext<'ctx>, data: D);
 }
 
-pub struct UiContext<'ctx>(&'ctx mut Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>, &'ctx mut ggez::Context);
+pub struct UiContext<'ctx>(
+    &'ctx mut Renderer<Rgba8, <GlBackendSpec as BackendSpec>::Resources>,
+    &'ctx mut ggez::Context,
+);
 impl UiContext<'_> {
     pub fn get_texture_id_for(&mut self, asset: &ImageAsset) -> imgui::TextureId {
         let id = imgui::TextureId::from(asset.id() as usize);

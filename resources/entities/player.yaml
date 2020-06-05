@@ -10,7 +10,7 @@ components:
         body: 
             status: "dynamic"
             mass: 1.0
-        collide:
+        colliders:
             collision_membership: [ { collision_group: "players" } ]
             sensor: false
             shape:
@@ -26,6 +26,19 @@ components:
                 west: 
                     pos: { x: -20.0, y: 6.0 }
                     size: { width: 44.0, height: 18.0 }
+            hitbox:
+                north:
+                    pos: { x: -12.0, y: -21.0 }
+                    size: { width: 26.0, height: 53.0 }
+                east: 
+                    pos: { x: -19.0, y: -16.0 }
+                    size: { width: 41.0, height: 41.0 }
+                south:
+                    pos: { x: -12.0, y: -21.0 }
+                    size: { width: 26.0, height: 53.0 }
+                west: 
+                    pos: { x: -19.0, y: -16.0 }
+                    size: { width: 41.0, height: 41.0 }
     Movement:
         max_velocity: 200.0
         acceleration_flat: 250.0

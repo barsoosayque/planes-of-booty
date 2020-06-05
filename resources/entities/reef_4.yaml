@@ -7,7 +7,7 @@ components:
         body: 
             status: "static"
             mass: 100.0
-        collide:
+        colliders:
             collision_membership: [ { collision_group: "props" } ]
             sensor: false
             shape:

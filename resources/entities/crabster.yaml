@@ -10,13 +10,17 @@ components:
         body: 
             status: "dynamic"
             mass: 5.0
-        collide:
+        colliders:
             collision_membership: [ { collision_group: "enemies" } ]
             sensor: false
             shape:
                 single:
-                    pos: { x: -22.0, y: -2.0 }
-                    size: { width: 50.0, height: 22.0 }
+                    pos: { x: -13.0, y: 14.0 }
+                    size: { width: 40.0, height: 8.0 }
+            hitbox:
+                single:
+                    pos: { x: -30.0, y: -24.0 }
+                    size: { width: 72.0, height: 44.8 }
     HealthPool:
         max_hp: 80
         hp: 80

@@ -21,7 +21,7 @@ impl<'a> UiBuilder<&mut UiData<'a>> for GameOverWindow {
                 ui.set_cursor_pos([80.0, 0.0]);
                 let game_over = data.assets.get::<ImageAsset>("/sprites/ui/game-over.png", ctx.as_mut()).unwrap();
                 Image::new(ctx.get_texture_id_for(&game_over), [540.0, 380.0]).build(ui);
-                ui.dummy([0.0,100.0]);
+                ui.dummy([0.0, 100.0]);
 
                 if ui.button(im_str!("Restart"), [300.0, 50.0]) {
                     data.scene_controls.queue_restart = true;

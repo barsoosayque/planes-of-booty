@@ -214,7 +214,7 @@ impl<'a> System<'a> for InputsSystem {
                 match key {
                     KeyCode::Escape => {
                         ui.pause.is_opened = !ui.pause.is_opened;
-                    }
+                    },
                     KeyCode::I => {
                         ui.inventory_window.show_inventories_for.insert(e);
                     },
@@ -369,7 +369,10 @@ impl<'a> System<'a> for DestructionSystem {
             }
 
             if let Some(physic) = physics.get(e) {
-                physic_world.colliders.remove(physic.collide.0);
+                physic_world.colliders.remove(physic.colliders.real.0);
+                if let Some((hitbox, _)) = physic.colliders.hitbox {
+                    physic_world.colliders.remove(hitbox);
+                }
                 physic_world.bodies.remove(physic.body);
             }
 

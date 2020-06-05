@@ -33,8 +33,14 @@ impl ShapeshifterForm for CrabUnderwaterForm {
             let physics = world.read_storage::<component::Physic>();
             let mut physic_world = world.write_resource::<resource::PhysicWorld>();
             let physic = physics.get(e).unwrap();
-            let collide = physic_world.colliders.get_mut(physic.collide.0).unwrap();
-            collide.set_collision_groups(collide.collision_groups().clone().with_blacklist(&component::NO_COLLISION));
+            let collider = physic_world.colliders.get_mut(physic.colliders.real.0).unwrap();
+            collider.set_collision_groups(collider.collision_groups().clone().with_blacklist(&component::NO_COLLISION));
+            if let Some((hitbox, _)) = physic.colliders.hitbox {
+                let hitbox_collider = physic_world.colliders.get_mut(hitbox).unwrap();
+                hitbox_collider.set_collision_groups(
+                    hitbox_collider.collision_groups().clone().with_blacklist(&component::NO_COLLISION),
+                );
+            }
         });
     }
 
@@ -44,8 +50,14 @@ impl ShapeshifterForm for CrabUnderwaterForm {
             let physics = world.read_storage::<component::Physic>();
             let mut physic_world = world.write_resource::<resource::PhysicWorld>();
             let physic = physics.get(e).unwrap();
-            let collide = physic_world.colliders.get_mut(physic.collide.0).unwrap();
-            collide.set_collision_groups(collide.collision_groups().clone().with_blacklist(&[]));
+            let collider = physic_world.colliders.get_mut(physic.colliders.real.0).unwrap();
+            collider.set_collision_groups(collider.collision_groups().clone().with_blacklist(&[]));
+            if let Some((hitbox, _)) = physic.colliders.hitbox {
+                let hitbox_collider = physic_world.colliders.get_mut(hitbox).unwrap();
+                hitbox_collider.set_collision_groups(
+                    hitbox_collider.collision_groups().clone().with_blacklist(&[]),
+                );
+            }
         });
     }
 }
@@ -127,7 +139,7 @@ impl ShapeshifterForm for WhaleWait {
     fn time(&self) -> f32 { 4.0 }
 
     fn can_update(&self, e: Entity, world: &World) -> bool {
-        world.read_storage::<component::Target>().get(e).map(|t| t.target.is_some()).unwrap_or(true)
+        world.read_storage::<component::Target>().get(e).and_then(|t| t.target).is_some()
     }
 
     fn on_begin(&self, e: Entity, update: &LazyUpdate, (ctx, assets): ShapeshifterData) {
@@ -212,7 +224,7 @@ impl ShapeshifterForm for MimicAttack {
         let new_asset = assets.get::<ImageAsset>("/sprites/entity/chest-funny.png", ctx).unwrap();
         update.insert(e, component::Sprite {
             asset: component::SpriteAsset::Single { value: new_asset },
-            size: Size2f::new(50.0, 37.0),
+            size: Size2f::new(71.0, 37.0),
         });
     }
 }

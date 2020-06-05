@@ -23,7 +23,7 @@ impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for DebugWindow {
                 ui.text(im_str!("Spawn entity:"));
                 ChildWindow::new("spawn_entity").size([0.0, 100.0]).border(true).build(&ui, || {
                     for id in &entity::IDS {
-                        if *id == entity::ID::Player  {
+                        if *id == entity::ID::Player {
                             continue;
                         }
 
@@ -45,7 +45,11 @@ impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for DebugWindow {
                             Image::new(tex_id, [30.0, 30.0]).build(ui);
                             ui.same_line(10.0);
                             let label = ImString::new(format!("{:?}", id));
-                            if Selectable::new(&label).selected(self.selected_item == Some(*id)).size([0.0, 20.0]).build(&ui) {
+                            if Selectable::new(&label)
+                                .selected(self.selected_item == Some(*id))
+                                .size([0.0, 20.0])
+                                .build(&ui)
+                            {
                                 self.selected_item = Some(*id);
                             }
                         }
@@ -58,9 +62,15 @@ impl<'a> UiBuilder<(&mut UiData<'a>, &mut bool)> for DebugWindow {
                 }
                 if ui.button(im_str!("Add"), [150.0, 20.0]) {
                     use std::convert::TryInto;
-                    if let (Some(id), Some((player, _))) = (self.selected_item, (&data.entities, &data.player_tag).join().next()) {
+                    if let (Some(id), Some((player, _))) =
+                        (self.selected_item, (&data.entities, &data.player_tag).join().next())
+                    {
                         log::trace!("Add item {:?} x{} to player", id, self.item_spawn_count);
-                        data.spawn_queue.0.push_back(SpawnItem::Item(id, self.item_spawn_count.try_into().unwrap(), player));
+                        data.spawn_queue.0.push_back(SpawnItem::Item(
+                            id,
+                            self.item_spawn_count.try_into().unwrap(),
+                            player,
+                        ));
                     }
                 }
             });

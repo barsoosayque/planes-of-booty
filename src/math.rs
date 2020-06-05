@@ -1,4 +1,4 @@
-use euclid::{Point2D, Size2D, UnknownUnit, Vector2D, Angle};
+use euclid::{Angle, Point2D, Size2D, UnknownUnit, Vector2D};
 
 pub type Angle2f = Angle<f32>;
 pub type Size2f = Size2D<f32, UnknownUnit>;

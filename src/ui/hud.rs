@@ -1,7 +1,7 @@
 use super::system::{UiBuilder, UiContext};
 use crate::{
-    centered_text,
     assets::*,
+    centered_text,
     ecs::{component::*, resource::UiData},
     within_window,
 };
