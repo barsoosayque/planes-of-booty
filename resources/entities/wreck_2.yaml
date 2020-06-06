@@ -1,0 +1,17 @@
+components:
+    Sprite:
+        asset:
+            single: { image: "/sprites/entity/wreck_2.png" }
+        size: { width: 218.0, height: 100.0 }
+    Physic:
+        body: 
+            status: "static"
+            mass: 100.0
+        colliders:
+            collision_membership: [ { collision_group: "props" } ]
+            sensor: false
+            shape:
+                single:
+                    pos: { x: -96.0, y: 11.0 }
+                    size: { width: 193.0, height: 23.0 }
+    Transform: { __default: true }

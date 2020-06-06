@@ -223,7 +223,7 @@ impl<'a> System<'a> for InputsSystem {
                             ui.inventory_window.show_inventories_for.insert(near_inventory_e);
                         }
                         if interaction.near_level_changer.is_some() {
-                            arena.difficulty += 0.5;
+                            arena.difficulty *= 1.5;
                             let mut rng = thread_rng();
                             arena.change_to.replace(*arena::IDS.choose(&mut rng).unwrap());
                         }
