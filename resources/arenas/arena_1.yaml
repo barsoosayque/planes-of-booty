@@ -1,24 +1,32 @@
 width: 2000.0
 height: 1200.0
 entities:
-    - id: reef_3
-      pos: { x: -495.03204, y: -283.98416 }
-    - id: reef_3
-      pos: { x: 764.33655, y: 413.7199 }
-    - id: reef_3
-      pos: { x: 836.90796, y: 291.46057 }
-    - id: reef_2
-      pos: { x: -636.6677, y: -240.95618 }
-    - id: reef_2
-      pos: { x: 956.2804, y: 171.01056 }
-    - id: reef_4
-      pos: { x: 913.16077, y: 424.1718 }
-    - id: reef_4
-      pos: { x: -575.49243, y: -168.88095 }
-    - id: reef_4
-      pos: { x: -413.82178, y: -308.85245 }
-    - id: reef_4
-      pos: { x: -834.9099, y: -84.33569 }
+    - id: "reef_1"
+      pos: { x: -391.2, y: 78.6 }
+    - id: "reef_1"
+      pos: { x: -251.2, y: -290.6 }
+    - id: "reef_1"
+      pos: { x: 186.5, y: -212.2 }
+    - id: "reef_1"
+      pos: { x: 63.0, y: 168.2 }
+    - id: "wreck_1"
+      pos: { x: -350.1, y: -210.8 }
+    - id: "reef_1"
+      pos: { x: -793.5, y: 320.2 }
+    - id: "reef_2"
+      pos: { x: -893.3, y: 60.4 }
+    - id: "reef_2"
+      pos: { x: -912.5, y: -513.4 }
+    - id: "reef_1"
+      pos: { x: -784.0, y: -375.5 }
+    - id: "reef_1"
+      pos: { x: 492.3, y: -476.0 }
+    - id: "reef_1"
+      pos: { x: 667.2, y: 451.5 }
+    - id: "wreck_2"
+      pos: { x: 476.8, y: 431.3 }
 spawn_points:
-    - pos: { x: 200.0, y: 200.0 }
-      radius: 100.0
+    - radius: 100.0
+      pos: { x: -835.6, y: -204.8 }
+    - radius: 100.0
+      pos: { x: 628.7, y: -469.7 }

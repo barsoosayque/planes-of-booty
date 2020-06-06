@@ -1,0 +1,52 @@
+width: 2000.0
+height: 1200.0
+entities:
+    - id: "reef_1"
+      pos: { x: -168.8, y: -332.0 }
+    - id: "reef_1"
+      pos: { x: -139.2, y: -348.0 }
+    - id: "reef_1"
+      pos: { x: -143.6, y: -351.3 }
+    - id: "reef_1"
+      pos: { x: -170.7, y: -364.6 }
+    - id: "wreck_1"
+      pos: { x: -241.5, y: -291.9 }
+    - id: "reef_1"
+      pos: { x: 235.6, y: -340.0 }
+    - id: "reef_1"
+      pos: { x: -501.9, y: 51.7 }
+    - id: "reef_1"
+      pos: { x: -196.2, y: 205.8 }
+    - id: "reef_1"
+      pos: { x: 209.7, y: 223.6 }
+    - id: "reef_1"
+      pos: { x: 471.3, y: 36.1 }
+    - id: "wreck_1"
+      pos: { x: -219.8, y: 322.2 }
+    - id: "wreck_1"
+      pos: { x: 475.9, y: 137.6 }
+    - id: "reef_3"
+      pos: { x: -784.9, y: 271.3 }
+    - id: "reef_3"
+      pos: { x: -450.6, y: 492.9 }
+    - id: "reef_3"
+      pos: { x: -868.0, y: -328.6 }
+    - id: "reef_3"
+      pos: { x: -662.1, y: -510.8 }
+    - id: "reef_3"
+      pos: { x: 649.9, y: -565.1 }
+    - id: "reef_3"
+      pos: { x: 907.5, y: -397.3 }
+    - id: "reef_3"
+      pos: { x: 681.3, y: 486.6 }
+    - id: "reef_3"
+      pos: { x: 856.7, y: 264.4 }
+spawn_points:
+    - radius: 100.0
+      pos: { x: -748.8, y: 463.8 }
+    - radius: 100.0
+      pos: { x: 869.6, y: 495.0 }
+    - radius: 100.0
+      pos: { x: 911.9, y: -545.5 }
+    - radius: 100.0
+      pos: { x: -898.5, y: -513.9 }

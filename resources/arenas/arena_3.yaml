@@ -1,0 +1,64 @@
+width: 2000.0
+height: 1200.0
+entities:
+    - id: "reef_4"
+      pos: { x: -16.8, y: -326.6 }
+    - id: "reef_4"
+      pos: { x: -208.8, y: -276.2 }
+    - id: "reef_4"
+      pos: { x: 201.6, y: -260.1 }
+    - id: "reef_4"
+      pos: { x: -355.4, y: -121.2 }
+    - id: "reef_4"
+      pos: { x: 330.1, y: -91.9 }
+    - id: "reef_4"
+      pos: { x: -252.6, y: 173.8 }
+    - id: "reef_4"
+      pos: { x: -12.5, y: 306.7 }
+    - id: "reef_4"
+      pos: { x: 242.8, y: 190.5 }
+    - id: "reef_1"
+      pos: { x: -526.1, y: 64.7 }
+    - id: "reef_1"
+      pos: { x: -274.1, y: 365.0 }
+    - id: "reef_1"
+      pos: { x: 268.8, y: 382.3 }
+    - id: "reef_1"
+      pos: { x: 464.2, y: 69.3 }
+    - id: "reef_1"
+      pos: { x: 433.9, y: -280.2 }
+    - id: "reef_1"
+      pos: { x: 160.4, y: -446.4 }
+    - id: "reef_1"
+      pos: { x: -209.7, y: -465.1 }
+    - id: "reef_1"
+      pos: { x: -432.3, y: -340.9 }
+    - id: "wreck_1"
+      pos: { x: -625.8, y: -477.0 }
+    - id: "wreck_1"
+      pos: { x: -842.8, y: -323.9 }
+    - id: "reef_2"
+      pos: { x: -882.6, y: -280.6 }
+    - id: "reef_3"
+      pos: { x: -619.4, y: 517.2 }
+    - id: "reef_3"
+      pos: { x: -860.8, y: 313.1 }
+    - id: "reef_2"
+      pos: { x: 558.0, y: 380.9 }
+    - id: "reef_2"
+      pos: { x: 695.8, y: 109.3 }
+    - id: "reef_2"
+      pos: { x: 917.3, y: 379.6 }
+    - id: "reef_3"
+      pos: { x: 651.0, y: -559.1 }
+    - id: "reef_3"
+      pos: { x: 895.0, y: -427.7 }
+spawn_points:
+    - radius: 100.0
+      pos: { x: -904.5, y: -493.4 }
+    - radius: 100.0
+      pos: { x: -871.8, y: 494.1 }
+    - radius: 100.0
+      pos: { x: 849.2, y: -502.8 }
+    - radius: 100.0
+      pos: { x: 888.9, y: 494.7 }

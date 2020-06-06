@@ -29,7 +29,7 @@ pub fn generate_arenas(arenas: &[ArenaDef]) -> Scope {
         fn_gen.line("use rand::{thread_rng, seq::SliceRandom, Rng};");
         for entity in &arena.entities {
             fn_gen.line(format!(
-                "spawn_queue.0.push_back(resource::SpawnItem::Entity(entity::ID::{}, crate::math::Point2f::new({}, {}), vec![]));",
+                "spawn_queue.0.push_back(resource::SpawnItem::Entity(entity::ID::{}, crate::math::Point2f::new({}f32, {}f32), vec![]));",
                 entity.id.to_camel_case(), entity.pos.x, entity.pos.y
             ));
         }

@@ -1,0 +1,7 @@
+start: 3
+grow: 2.0
+weighted:
+    - id: "whale"
+      weight: 1
+    - id: "crab_jr"
+      weight: 4

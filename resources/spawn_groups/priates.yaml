@@ -7,5 +7,3 @@ weighted:
       weight: 4
     - id: "pirate_ship_green"
       weight: 2
-    - id: "pirate_ship_red"
-      weight: 1

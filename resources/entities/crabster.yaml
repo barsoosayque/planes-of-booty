@@ -22,8 +22,8 @@ components:
                     pos: { x: -30.0, y: -24.0 }
                     size: { width: 72.0, height: 44.8 }
     HealthPool:
-        max_hp: 80
-        hp: 80
+        max_hp: 50
+        hp: 50
     Movement:
         max_velocity: 100.0
         acceleration_flat: 40.0
