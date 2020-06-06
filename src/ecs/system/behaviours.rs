@@ -24,7 +24,8 @@ use std::{
 
 pub struct ShotsDodgerSystem;
 impl<'a> System<'a> for ShotsDodgerSystem {
-    type SystemData = (Entities<'a>, WriteStorage<'a, DamageReciever>, WriteStorage<'a, AvoidShots>, WriteStorage<'a, Transform>);
+    type SystemData =
+        (Entities<'a>, WriteStorage<'a, DamageReciever>, WriteStorage<'a, AvoidShots>, WriteStorage<'a, Transform>);
 
     fn run(&mut self, (entities, mut dmg_recs, mut dodgers, mut transforms): Self::SystemData) {
         let mut to_remove: Vec<_> = vec![];
@@ -183,7 +184,7 @@ impl<'a> System<'a> for WeaponrySystem {
                                 .and_then(|p| pworld.bodies.get_mut(p.body))
                                 .and_then(|b| b.downcast_mut::<RigidBody<f32>>()),
                             shooter_damage_reciever: dmg_rec_opt,
-                            shooting_at: transform.pos,
+                            shooting_at: transform.pos.to_point(),
                             damage_multiplier: weaponry.damage_multiplier,
                             prop: prop,
                             projectiles: spawn_queue.deref_mut(),
@@ -208,12 +209,12 @@ impl ProjectileSystem {
         spawn_queue: &'a mut SpawnQueue,
     ) -> ProjectileData<'a> {
         ProjectileData {
-            asset: &projectile.def.asset,
+            asset: projectile.def.asset.as_ref(),
             damage: projectile.def.damage,
-            velocity: &projectile.def.velocity,
+            velocity: projectile.def.velocity,
             distance_traveled: distance.distance,
-            pos: &transform.pos,
-            size: &projectile.def.size,
+            pos: transform.pos.to_point(),
+            size: projectile.def.size,
             ignore_groups: &projectile.def.ignore_groups,
             projectiles: spawn_queue,
         }
@@ -244,39 +245,43 @@ impl<'a> System<'a> for ProjectileSystem {
             mut to_destruct,
         ): Self::SystemData,
     ) {
-        use nphysics2d::ncollide2d::query::Proximity;
-        for proximity in physic_world.geometry_world.proximity_events() {
-            if proximity.new_status == Proximity::Intersecting {
-                if let (Some(entity1), Some(entity2)) = (
-                    physic_world.entity_for_collider(&proximity.collider1),
-                    physic_world.entity_for_collider(&proximity.collider2),
-                ) {
-                    let (dmg_rec, dmg_deal, projectile, deal_e) =
-                        if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
-                            (dmg_recievers.get_mut(*entity1), dmg_dealers.get(*entity2), projectiles.get(*entity2))
-                        {
-                            (dmg_rec, dmg_deal, projectile, entity2)
-                        } else if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
-                            (dmg_recievers.get_mut(*entity2), dmg_dealers.get(*entity1), projectiles.get(*entity1))
-                        {
-                            (dmg_rec, dmg_deal, projectile, entity1)
-                        } else {
-                            continue;
-                        };
+        let per_entity = physic_world
+            .geometry_world
+            .proximity_pairs(&physic_world.colliders, true)
+            .filter_map(|(_, collider1, _, collider2, _, _)| {
+                collider1
+                    .user_data()
+                    .and_then(|d| d.downcast_ref::<Entity>())
+                    .into_iter()
+                    .chain(collider2.user_data().and_then(|d| d.downcast_ref::<Entity>()))
+                    .collect_tuple::<(&Entity, &Entity)>()
+            })
+            .dedup_by(|t1, t2| (t1.0 == t2.0 && t1.1 == t2.1) || (t1.1 == t2.0 && t1.0 == t2.1));
 
-                    dmg_rec.damage_queue.push((dmg_deal.damage, dmg_deal.damage_type));
-                    let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
-                        (&projectile.def.behaviour, distances.get(*deal_e), transforms.get(*deal_e))
-                    {
-                        let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
-                        behaviour.on_hit(&mut data)
-                    } else {
-                        true
-                    };
-                    if consumed {
-                        to_destruct.insert(*deal_e, tag::PendingDestruction).unwrap();
-                    }
-                }
+        for (entity1, entity2) in per_entity {
+            let (dmg_rec, dmg_deal, projectile, deal_e) = if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                (dmg_recievers.get_mut(*entity1), dmg_dealers.get(*entity2), projectiles.get(*entity2))
+            {
+                (dmg_rec, dmg_deal, projectile, entity2)
+            } else if let (Some(dmg_rec), Some(dmg_deal), Some(projectile)) =
+                (dmg_recievers.get_mut(*entity2), dmg_dealers.get(*entity1), projectiles.get(*entity1))
+            {
+                (dmg_rec, dmg_deal, projectile, entity1)
+            } else {
+                continue;
+            };
+
+            dmg_rec.damage_queue.push((dmg_deal.damage, dmg_deal.damage_type));
+            let consumed = if let (Some(behaviour), Some(distance), Some(transform)) =
+                (&projectile.def.behaviour, distances.get(*deal_e), transforms.get(*deal_e))
+            {
+                let mut data = Self::comps_to_data(&projectile, &distance, &transform, &mut spawn_queue);
+                behaviour.on_hit(&mut data)
+            } else {
+                true
+            };
+            if consumed {
+                to_destruct.insert(*deal_e, tag::PendingDestruction).unwrap();
             }
         }
 
@@ -393,7 +398,7 @@ impl<'a> System<'a> for ShootTargetSystem {
                 let area = Circle2f::new(transform.pos.to_point(), shoot_target.radius);
                 if area.contains(target_transform.pos.to_point()) {
                     wpn_prop.is_shooting = true;
-                    wpn_prop.shooting_normal = (target_transform.pos - transform.pos).normalize()
+                    wpn_prop.target_pos = target_transform.pos.to_point();
                 } else {
                     wpn_prop.is_shooting = false;
                 }
@@ -506,10 +511,8 @@ impl<'a> System<'a> for DistanceCounterSystem {
 
     fn run(&mut self, (mut counters, transforms): Self::SystemData) {
         for (counter, transform) in (&mut counters, &transforms).join() {
-            if let Some(last) = counter.last_pos {
-                let d = (transform.pos - last).length();
-                counter.distance += d;
-            }
+            let d = (transform.pos - counter.last_pos.unwrap_or(transform.pos)).length();
+            counter.distance += d;
             counter.last_pos.replace(transform.pos);
         }
     }

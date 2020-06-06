@@ -53,7 +53,6 @@ impl Game {
             .with(PhysicTransformSyncSystem::default(), "physic_transform_sync_system", &[])
             .with(PhysicSystem, "physic_system", &["directional_colliders_system", "physic_transform_sync_system"])
             .with(DistanceCounterSystem, "distance_counter_system", &["physic_system"])
-            .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             .with(ContainerSinkSystem, "container_sink_system", &[])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(RandomizedWeaponsSystem::default(), "randomized_weapons_system", &[])
@@ -62,6 +61,7 @@ impl Game {
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
             .with(ShotsDodgerSystem, "shots_dodger_system", &["projectile_system", "impact_damage_system"])
             .with(DamageSystem, "damage_system", &["shots_dodger_system", "projectile_system", "impact_damage_system"])
+            .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             // barrier for "on destruction" systems
             .with_barrier()
             .with(ExplodeOnDeathSystem, "explode_on_death_system", &[])
@@ -160,21 +160,6 @@ impl EventHandler for Game {
             inputs.mouse_pressed = new_press;
         }
 
-        // run ui system before any other system so it can
-        // consume input events
-        UiSystem(ctx, &mut self.imgui).run_now(&self.world);
-        if self.world.read_resource::<UiHub>().pause.is_opened {
-            return Ok(());
-        }
-
-        self.dispatcher.dispatch(&self.world);
-        // shapeshifter is a special kind of system, as it requires
-        // ggez context
-        ShapeshifterSystem(ctx).run_now(&self.world);
-
-        // reset inputs
-        self.world.write_resource::<Inputs>().mouse_scroll = 0.0;
-
         // Systems can spawn new stuff using SpawnQueue resource
         // TODO: make this LazyUpdate system
         for item in self.world.write_resource::<SpawnQueue>().0.drain(..) {
@@ -235,11 +220,16 @@ impl EventHandler for Game {
                             )
                             .build(BodyPartHandle(body, 0)),
                     );
-                    let entity = self
-                        .world
-                        .create_entity_unchecked()
+                    let mut builder = self.world.create_entity_unchecked();
+                    if let Some(asset) = &def.asset {
+                        builder = builder.with(Sprite {
+                            asset: SpriteAsset::Single { value: assets.get::<ImageAsset>(&asset, ctx).unwrap() },
+                            size: def.size,
+                        })
+                    }
+                    let entity = builder
                         .with(Transform {
-                            pos: def.pos,
+                            pos: def.pos.to_vector(),
                             rotation: if def.rotate_projectile {
                                 def.velocity.angle_from_x_axis()
                             } else {
@@ -257,10 +247,6 @@ impl EventHandler for Game {
                                 hitbox: None,
                             },
                         })
-                        .with(Sprite {
-                            asset: SpriteAsset::Single { value: assets.get::<ImageAsset>(&def.asset, ctx).unwrap() },
-                            size: def.size,
-                        })
                         .with(Projectile { def: def })
                         .build();
                     phys_world.bodies.rigid_body_mut(body).unwrap().set_user_data(Some(Box::new(entity)));
@@ -270,6 +256,21 @@ impl EventHandler for Game {
         }
 
         self.world.maintain();
+
+        // run ui system before any other system so it can
+        // consume input events
+        UiSystem(ctx, &mut self.imgui).run_now(&self.world);
+        if self.world.read_resource::<UiHub>().pause.is_opened {
+            return Ok(());
+        }
+
+        self.dispatcher.dispatch(&self.world);
+        // shapeshifter is a special kind of system, as it requires
+        // ggez context
+        ShapeshifterSystem(ctx).run_now(&self.world);
+
+        // reset inputs
+        self.world.write_resource::<Inputs>().mouse_scroll = 0.0;
 
         Ok(())
     }

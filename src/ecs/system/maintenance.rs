@@ -159,7 +159,6 @@ pub struct InputsSystem;
 impl<'a> System<'a> for InputsSystem {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, Transform>,
         WriteStorage<'a, Movement>,
         WriteExpect<'a, UiHub>,
         WriteExpect<'a, Arena>,
@@ -180,7 +179,6 @@ impl<'a> System<'a> for InputsSystem {
         &mut self,
         (
             entities,
-            transforms,
             mut movements,
             mut ui,
             mut arena,
@@ -261,10 +259,10 @@ impl<'a> System<'a> for InputsSystem {
                 }
             }
         }
-        for (transform, weaponry, _) in (&transforms, &mut weaponries, &tag).join() {
+        for (weaponry, _) in (&mut weaponries, &tag).join() {
             if let Some(props) = weaponry.primary.and_then(|i| wpn_props.get_mut(i)) {
                 props.is_shooting = inputs.mouse_pressed.contains(&MouseButton::Left);
-                props.shooting_normal = (camera.project(&inputs.mouse_pos).to_vector() - transform.pos).normalize()
+                props.target_pos = camera.project(&inputs.mouse_pos);
             }
 
             if inputs.mouse_scroll != 0.0 && weaponry.primary.is_some() && weaponry.secondary.is_some() {

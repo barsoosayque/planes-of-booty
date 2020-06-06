@@ -203,7 +203,7 @@ pub struct RandomizedWeaponProperties {
 #[derive(Default, Component)]
 #[storage(VecStorage)]
 pub struct WeaponProperties {
-    pub shooting_normal: Vec2f,
+    pub target_pos: Point2f,
     pub is_shooting: bool,
 
     pub clip_size: u8,

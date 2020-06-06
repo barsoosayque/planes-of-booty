@@ -1,0 +1,11 @@
+components:
+    ParticleProperties: { __default: true }
+    Transform: { __default: true }
+shared_components:
+    ParticleDef:
+        spritesheet: { image: "/sprites/particle/electro.png" }
+        sheet_width: 3
+        sheet_height: 3
+        time_per_frame: 0.1
+        frames: 8 
+        size: { width: 40.0, height: 40.0 }

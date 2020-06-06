@@ -197,7 +197,9 @@ impl<'a> UiBuilder<&mut UiData<'a>> for UiHub {
 pub struct SpawnQueue(pub Queue<SpawnItem>);
 
 impl ProjectileBuilder for SpawnQueue {
-    fn build(&mut self, def: ProjectileDef) { self.0.push_back(SpawnItem::Projectile(def)); }
+    fn projectile(&mut self, def: ProjectileDef) { self.0.push_back(SpawnItem::Projectile(def)); }
+
+    fn particle(&mut self, id: particle::ID, pos: Point2f) { self.0.push_back(SpawnItem::Particle(id, pos)); }
 }
 
 pub enum SpawnItem {
