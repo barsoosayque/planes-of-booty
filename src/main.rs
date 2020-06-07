@@ -48,7 +48,7 @@ fn run() -> Result<()> {
             vsync: true,
             ..WindowSetup::default()
         })
-        .window_mode(WindowMode { fullscreen_type: FullscreenType::Desktop, borderless: true, ..WindowMode::default() })
+        .window_mode(WindowMode { fullscreen_type: FullscreenType::True, borderless: true, ..WindowMode::default() })
         .add_resource_path("resources")
         .build()?;
 

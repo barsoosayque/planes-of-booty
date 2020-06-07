@@ -5,6 +5,7 @@ components:
             attack_pattern: "shotgun"
             projectile: "/sprites/projectile/wave.png"
             projectile_size: { width: 40.0, height: 40.0 }
+            rotate_projectile: false
             distance: 500.0
             pellets: 5
             recoil: 0.0
