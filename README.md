@@ -20,6 +20,11 @@ Table of command line arguments:
 
 *And that's about it.*
 
+# Codegen
+
+So, the game uses special yaml files to generate code to spawn entities and do other cool things with them (like iterating through all the available entities). This is also the same for items and honestly everything you see on the screen besides UI.
+Codegen code is kind of messy, you have been warned. But it allows to create new arenas, spawn groups, eneimes, items and particle effects with ease. You can try it, it's so easy even a crab can do it !
+
 # Future
 
 While working on this, we have some ideas that would be cool to implement, but wasn't possible due to time constraints. So, I dumped those ideas here.
