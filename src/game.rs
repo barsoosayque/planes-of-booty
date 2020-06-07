@@ -74,7 +74,7 @@ impl Game {
         world.insert(UiHub::default());
         world.insert(SpawnQueue::default());
         world.insert(AssetManager::default());
-        world.insert(SceneControls::default());
+        world.insert(SceneControls { is_debug: std::env::args().any(|a| a == "--debug"), ..SceneControls::default() });
         world.insert(Arena::default());
         world.insert(PhysicWorld::new(Vec2f::new(0.0, 0.0)));
         world.register::<tag::Player>();

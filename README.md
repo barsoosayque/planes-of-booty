@@ -13,6 +13,13 @@
 
 A game made in 21 days for [My little Rougelike #1](https://itch.io/jam/mylittleroguelike1) gamejam.
 
+Table of command line arguments:
+|Argument|Description|
+|-|-|
+|`--debug`|Allow to acces in game debug tools|
+
+*And that's about it.*
+
 # Future
 
 While working on this, we have some ideas that would be cool to implement, but wasn't possible due to time constraints. So, I dumped those ideas here.

@@ -130,6 +130,7 @@ pub struct Inputs {
 
 #[derive(Default, Debug)]
 pub struct SceneControls {
+    pub is_debug: bool,
     pub is_debug_info: bool,
     pub is_debug_targeting: bool,
     pub is_debug_physic: bool,
