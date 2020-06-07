@@ -64,3 +64,10 @@ components:
     Target: { __default: true }
     Transform: { __default: true }
     Directional: { __default: true }
+shared_components:
+    DropTable:
+        drop_chance: 0.25
+        any_common: 8
+        any_rare: 2
+        any_legendary: 1
+        __default: true

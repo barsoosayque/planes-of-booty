@@ -7,7 +7,7 @@ components:
         name: "Trident"
         description: "Destroys armies in 10 seconds flat."
     Quality:
-        rarity: { rarity: "rare" }
+        rarity: { rarity: "legendary" }
     WeaponAttack:
         pattern: { attack_pattern: "lightning" }
     RandomizedWeaponProperties:

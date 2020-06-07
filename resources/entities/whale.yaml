@@ -43,6 +43,7 @@ components:
 shared_components:
     DropTable:
         drop_chance: 0.5
-        any_common: 3
+        any_common: 1
+        any_rare: 1
         any_legendary: 1
         __default: true

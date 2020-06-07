@@ -45,7 +45,8 @@ components:
     DamageReciever: { __default: true }
 shared_components:
     DropTable:
-        drop_chance: 0.5
-        any_common: 3
-        any_legendary: 1
+        drop_chance: 0.2
+        any_common: 4
+        any_rare: 6
+        any_legendary: 2
         __default: true

@@ -45,3 +45,9 @@ components:
     DamageReciever: { __default: true }
     Target: { __default: true }
     Transform: { __default: true }
+shared_components:
+    DropTable:
+        drop_chance: 0.2
+        any_rare: 2
+        any_legendary: 1
+        __default: true

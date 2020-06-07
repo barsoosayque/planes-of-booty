@@ -52,3 +52,9 @@ components:
     Directional: { __default: true }
     DamageReciever: { __default: true }
 tags: ["last_shot"]
+shared_components:
+    DropTable:
+        drop_chance: 0.05
+        any_common: 10 
+        any_rare: 1
+        __default: true
