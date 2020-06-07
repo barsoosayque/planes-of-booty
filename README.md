@@ -4,8 +4,8 @@
 
 # Planes of Booty
 
-<p align="center">
-    <a href="https://barsoosayque.itch.io/planes-of-booty
+<p>
+    <a href="https://barsoosayque.itch.io/planes-of-booty">
         <img src="https://img.shields.io/badge/download-itch.io-fa5c5c?style=flat-square"
             alt="download from itch.io"></a>
     <img src="https://img.shields.io/badge/release%20date-7%20Jun%202020-red?style=flat-square"
