@@ -2,8 +2,7 @@
     <img src="header.png" alt="header">
 </p>
 
-# Planes of Booty
-
+# <div align="center">Planes of Booty</div>
 <p>
     <a href="https://barsoosayque.itch.io/planes-of-booty">
         <img src="https://img.shields.io/badge/download-itch.io-fa5c5c?style=flat-square"
@@ -19,6 +18,7 @@ A game made in 21 days for [My little Rougelike #1](https://itch.io/jam/mylittle
 While working on this, we have some ideas that would be cool to implement, but wasn't possible due to time constraints. So, I dumped those ideas here.
 And here it is: the List of things worth considering if for some reason development will continue (and also things that were cut):
 
+* Sounds, please
 * Obviously, Save & Load
 * More on that, dynamic chunk generation and lazy chunk loading
 * Open map with island generation
