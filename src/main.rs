@@ -29,7 +29,7 @@ pub fn setup_logging() -> Result<()> {
             out.finish(format_args!("[{:<5}][{}] {}", colors.color(record.level()), record.target(), message))
         })
         // Filter out unnecessary stuff
-        .level(log::LevelFilter::Trace)
+        .level(if std::env::args().any(|a| a == "--debug") { log::LevelFilter::Trace } else { log::LevelFilter::Info })
         .level_for("gfx", log::LevelFilter::Off)
         .level_for("gfx_device_gl", log::LevelFilter::Off)
         .level_for("gilrs", log::LevelFilter::Off)
