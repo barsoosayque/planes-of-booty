@@ -1,0 +1,7 @@
+start: 4
+grow: 6.0
+weighted:
+    - id: "pirate_ship_green"
+      weight: 1
+    - id: "croc"
+      weight: 4

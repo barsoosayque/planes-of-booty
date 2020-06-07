@@ -316,7 +316,7 @@ pub fn generate_spawn_fn(def: &EntityDef, reflection_prefix: &str) -> Function {
 
     fn_gen.line("let entity = world.create_entity_unchecked()");
     for tag in &def.tags {
-        fn_gen.line(format!(".with(tag::{})", tag));
+        fn_gen.line(format!(".with(tag::{})", tag.to_camel_case()));
     }
     for (name, contents) in &def.components {
         let contents = stringify_component(&name, &contents);

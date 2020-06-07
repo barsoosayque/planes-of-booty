@@ -56,11 +56,11 @@ impl Game {
             .with(ContainerSinkSystem, "container_sink_system", &[])
             .with(InventoryMaintenanceSystem, "inv_maintenance_system", &[])
             .with(RandomizedWeaponsSystem::default(), "randomized_weapons_system", &[])
-            .with(WeaponrySystem, "weaponry_system", &["inputs_system"])
             .with(ProjectileSystem, "projectile_system", &["physic_system"])
             .with(ImpactDamageSystem, "impact_damage_system", &["physic_system"])
             .with(ShotsDodgerSystem, "shots_dodger_system", &["projectile_system", "impact_damage_system"])
             .with(DamageSystem, "damage_system", &["shots_dodger_system", "projectile_system", "impact_damage_system"])
+            .with(WeaponrySystem, "weaponry_system", &["inputs_system", "damage_system"])
             .with(DistanceLimitingSystem, "distance_limiting_system", &["distance_counter_system"])
             // barrier for "on destruction" systems
             .with_barrier()

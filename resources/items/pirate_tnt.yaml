@@ -1,0 +1,10 @@
+# This is weapon for croc, shoudn't be used by player
+components:
+    WeaponAttack:
+        pattern: { attack_pattern: "self_destruct" }
+    WeaponProperties:
+        damage: 30 
+        clip_size: 1
+        clip: 1
+        reloading_time: 1.0
+        __default: true

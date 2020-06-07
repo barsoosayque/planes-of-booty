@@ -98,6 +98,33 @@ impl AttackPattern for Ram {
     }
 }
 
+pub struct SelfDestruct;
+impl AttackPattern for SelfDestruct {
+    fn description(&self) -> &str { "Don't do that at home, kids." }
+
+    fn attack(&self, data: &mut AttackPatternData) {
+        let def = ProjectileDef {
+            damage: ((data.prop.damage as f32 * data.damage_multiplier) as u32, DamageType::Fire),
+            pos: data.shooting_at,
+            size: Size2f::new(100.0, 100.0),
+            behaviour: Some(Box::new(Self)),
+            ..ProjectileDef::default()
+        };
+        data.projectiles.projectile(def);
+
+        for i in 0..6 {
+            let (sin, cos) = Angle2f::radians(360.0 * i as f32).sin_cos();
+            data.projectiles.particle(
+                particle::ID::Explosion,
+                Point2f::new(data.shooting_at.x + sin * 50.0, data.shooting_at.y + cos * 50.0),
+            );
+        }
+    }
+}
+impl ProjectileBehaviour for SelfDestruct {
+    fn on_hit<'a>(&self, _: &mut ProjectileData<'a>) -> bool { false }
+}
+
 pub struct Lightning;
 impl AttackPattern for Lightning {
     fn description(&self) -> &str { "Area of effect attack with lightning damage type." }

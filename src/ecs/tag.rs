@@ -15,3 +15,7 @@ pub struct PendingDestruction;
 #[derive(Default, Component)]
 #[storage(NullStorage)]
 pub struct Container;
+
+#[derive(Default, Component)]
+#[storage(NullStorage)]
+pub struct LastShot;

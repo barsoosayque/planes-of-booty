@@ -48,7 +48,7 @@ components:
         max_hp: 300
         hp: 300
     Weaponry: 
-        # primary: { item: "ram" }
+        primary: { item: "slingshot" }
         __default: true
     Faction:
         id: { faction: "good" }

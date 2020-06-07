@@ -135,6 +135,8 @@ impl<'a> System<'a> for WeaponrySystem {
         WriteStorage<'a, Weaponry>,
         WriteStorage<'a, WeaponProperties>,
         ReadStorage<'a, WeaponAttack>,
+        ReadStorage<'a, tag::LastShot>,
+        ReadStorage<'a, tag::PendingDestruction>,
     );
 
     fn run(
@@ -150,6 +152,8 @@ impl<'a> System<'a> for WeaponrySystem {
             mut weaponries,
             mut props,
             attacks,
+            last_shots,
+            to_destruct,
         ): Self::SystemData,
     ) {
         fn reload(prop: &mut WeaponProperties, dt: f32) {
@@ -163,8 +167,16 @@ impl<'a> System<'a> for WeaponrySystem {
             }
         }
 
-        for (transform, weaponry, faction_opt, physics_opt, dmg_rec_opt) in
-            (&transforms, &mut weaponries, (&factions).maybe(), (&physics).maybe(), (&mut dmg_recievers).maybe()).join()
+        for (transform, weaponry, faction_opt, physics_opt, dmg_rec_opt, last_shot_opt, to_destruct_opt) in (
+            &transforms,
+            &mut weaponries,
+            (&factions).maybe(),
+            (&physics).maybe(),
+            (&mut dmg_recievers).maybe(),
+            (&last_shots).maybe(),
+            (&to_destruct).maybe(),
+        )
+            .join()
         {
             if let Some(mut prop) = weaponry.secondary.and_then(|w| props.get_mut(w)) {
                 if prop.passive_reloading {
@@ -177,7 +189,7 @@ impl<'a> System<'a> for WeaponrySystem {
 
                 // shot if cooled
                 if prop.cooldown == 0.0 {
-                    if prop.is_shooting && prop.clip > 0 {
+                    if (prop.is_shooting || (last_shot_opt.is_some() && to_destruct_opt.is_some())) && prop.clip > 0 {
                         let mut data = AttackPatternData {
                             shooter_faction: faction_opt.map(|f| &f.id),
                             shooter_body: physics_opt
