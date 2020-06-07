@@ -49,7 +49,7 @@ components:
         __default: true
     SearchForTarget:
         from_factions: [ { faction: "good" } ]
-        radius: 300.0
+        radius: 600.0
     ShootTarget: 
         radius: 200.0
     FollowTarget:
