@@ -28,4 +28,5 @@ jobs:
         name: planes-of-booty-linux
         path: |
           planes-of-booty
-          resources/{particles,shaders,sprites}
+          resources/shaders
+          resources/sprites
