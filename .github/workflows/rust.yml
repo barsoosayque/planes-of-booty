@@ -1,4 +1,4 @@
-name: Rust
+name: Game
 
 on:
   push:
@@ -11,21 +11,30 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install dependencies
+
+    - name: Install ubuntu dependencies
+      if: ${{ matrix.platform == 'ubuntu-latest' }}
       run: sudo apt-get install libasound2-dev libudev-dev pkg-config
+
     - name: Build
       run: cargo build --release --verbose
+
     - name: Run tests
       run: cargo test --verbose
+
     - name: Copy executable
       run: cp target/release/planes-of-booty .
+
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2.2.1
       with:
-        name: planes-of-booty-linux
+        name: planes-of-booty-${{ matrix.platform }}
         path: |
           planes-of-booty
           resources/shaders
