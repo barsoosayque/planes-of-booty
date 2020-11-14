@@ -21,7 +21,7 @@ jobs:
             executable: planes-of-booty
           - os: windows-latest
             executable: planes-of-booty.exe
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
 
