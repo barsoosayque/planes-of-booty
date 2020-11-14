@@ -38,7 +38,15 @@ jobs:
     - name: Copy executable
       run: cp target/release/${{ matrix.executable }} .
 
-    - name: Upload a Build Artifact
+    - name: Package an app bundle
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: |
+        cargo install packapp
+        packapp --res resources --ident planes-of-booty --name "planes-of-booty" \
+                --display-name "Planes of Booty" ${{ matrix.executable }}
+
+    - name: Upload a build artifact
+      if: ${{ matrix.os == 'windows-latest' || matrix.os == 'ubuntu-latest' }}
       uses: actions/upload-artifact@v2.2.1
       with:
         name: planes-of-booty-${{ matrix.os }}
@@ -46,3 +54,10 @@ jobs:
           ${{ matrix.executable }}
           resources/shaders
           resources/sprites
+
+    - name: Upload an app bundle artifact
+      if: ${{ matrix.os == 'macos-latest' }}
+      uses: actions/upload-artifact@v2.2.1
+      with:
+        name: planes-of-booty-${{ matrix.os }}
+        path: planes-of-booty.app
