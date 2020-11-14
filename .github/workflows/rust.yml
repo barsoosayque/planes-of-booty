@@ -33,7 +33,7 @@ jobs:
       run: cargo build --release --verbose
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --release --verbose
 
     - name: Copy executable
       run: cp target/release/${{ matrix.executable }} .
@@ -44,6 +44,8 @@ jobs:
         cargo install packapp
         packapp --res resources --ident planes-of-booty --name "planes-of-booty" \
                 --display-name "Planes of Booty" ${{ matrix.executable }}
+        mkdir mac-target
+        mv planes-of-booty.app mac-target
 
     - name: Upload a build artifact
       if: ${{ matrix.os == 'windows-latest' || matrix.os == 'ubuntu-latest' }}
@@ -60,4 +62,4 @@ jobs:
       uses: actions/upload-artifact@v2.2.1
       with:
         name: planes-of-booty-${{ matrix.os }}
-        path: planes-of-booty.app
+        path: mac-target
