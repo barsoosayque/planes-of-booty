@@ -1,5 +1,0 @@
-start: 2
-grow: 4.0
-weighted:
-    - id: "pirate_ship_ghost"
-      weight: 1

@@ -1,5 +1,0 @@
-start: 8 
-grow: 8.0
-weighted:
-    - id: "croc"
-      weight: 1

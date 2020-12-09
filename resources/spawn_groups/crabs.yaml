@@ -1,7 +1,0 @@
-start: 3
-grow: 1.0
-weighted:
-    - id: "crab_jr"
-      weight: 1
-    - id: "crabster"
-      weight: 1

@@ -1,8 +1,0 @@
-components:
-    Sprite:
-        asset:
-            single: { image: "/sprites/entity/chest-closed.png" }
-        size: { width: 40.0, height: 37.0 }
-    Transform: { __default: true }
-    Inventory: { __default: true }
-tags: ["Container"]

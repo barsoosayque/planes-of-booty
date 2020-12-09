@@ -1,7 +1,0 @@
-components:
-    Sprite:
-        asset:
-            single: { image: "/sprites/entity/swirl.png" }
-        size: { width: 150.0, height: 80.0 }
-    Transform: { __default: true }
-tags: ["LevelChanger"]

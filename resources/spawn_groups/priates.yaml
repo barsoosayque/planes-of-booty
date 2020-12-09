@@ -1,9 +1,0 @@
-start: 4
-grow: 4.0
-weighted:
-    - id: "pirate_raft"
-      weight: 8
-    - id: "pirate_ship_blue"
-      weight: 4
-    - id: "pirate_ship_green"
-      weight: 2
