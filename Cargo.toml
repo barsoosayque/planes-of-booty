@@ -5,15 +5,12 @@ authors = ["barsoosayque <shtoshich@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bevy = "0.3.0"
-bevy_fallable = { version = "0.3.0" }
+bevy = "0.4.0"
+bevy_fallible = { version = "0.4.0" }
 
 nphysics2d = "0.15.1"
 
 anyhow = "1.0.31"
-log = "0.4.8"
-fern = { version = "0.6.0", features = ["colored"] }
 rand = "0.7.3"
 enum-map = "0.6.2"
 itertools = "0.9.0"
-smallvec = "1.5.1"

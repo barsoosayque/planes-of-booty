@@ -1,21 +1,23 @@
 mod state;
 mod utils;
 
-use bevy::prelude::*;
-use bevy_fallable::FallableSystemPlugin;
-use log::info;
-use utils::LoggingPlugin;
+use bevy::{
+    log::{Level, LogSettings},
+    prelude::*,
+};
+use bevy_fallible::FallibleSystemPlugin;
 use state::StatePlugin;
 
 fn main() {
-    info!("Running {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    fn startup() {
+        info!("Running {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    }
 
     App::build()
+        .add_resource(LogSettings { level: Level::DEBUG, ..LogSettings::default() })
         .add_plugins(DefaultPlugins)
         .add_plugin(StatePlugin)
-        .add_plugin(FallableSystemPlugin)
-        .add_plugin(LoggingPlugin)
+        .add_plugin(FallibleSystemPlugin)
+        .add_startup_system(startup.system())
         .run();
-
-    info!("Exited cleanly.");
 }

@@ -1,18 +1,16 @@
-use super::*;
-use anyhow::Result;
-use bevy_fallable::fallable_system;
+use bevy::prelude::*;
+use super::{stage, State::MainMenu};
 
 pub struct MainMenuPlugin;
 
-pub struct MainMenuComponent;
-
 impl Plugin for MainMenuPlugin {
-    fn build(&self, app: &mut AppBuilder) { app.add_system_to_stage(stage::UPDATE, Self::create_system.system()); }
+    fn build(&self, app: &mut AppBuilder) {
+        app.on_state_enter(stage::APP_STATE, MainMenu, Self::setup.system());
+    }
 }
 
 impl MainMenuPlugin {
-    fn create_system(added: Query<Added<MainMenuComponent>>) {
-        for _ in added.iter() {
-        }
+    fn setup() {
+        debug!("hi from main menu");
     }
 }
