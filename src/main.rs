@@ -15,6 +15,7 @@ fn main() {
 
     App::build()
         .add_resource(LogSettings { level: Level::DEBUG, ..LogSettings::default() })
+        .add_resource(ClearColor(Color::rgb(0.08, 0.04, 0.1)))
         .add_plugins(DefaultPlugins)
         .add_plugin(StatePlugin)
         .add_plugin(FallibleSystemPlugin)
