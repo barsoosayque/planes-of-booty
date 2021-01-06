@@ -4,6 +4,10 @@ version = "0.2.0"
 authors = ["barsoosayque <shtoshich@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["develop"]
+develop = []
+
 [dependencies]
 bevy = "0.4.0"
 bevy_fallible = { version = "0.4.0" }
@@ -15,3 +19,4 @@ rand = "0.7.3"
 enum-map = "0.6.2"
 itertools = "0.9.0"
 bevy_megaui = "0.1.3"
+pico-args = "0.4.0"
