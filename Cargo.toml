@@ -29,9 +29,6 @@ imgui = { git = "https://github.com/barsoosayque/imgui-rs.git", branch = 'toolti
 # using ggez with some patches to allow images to work with imgui
 # probably next ggez version will include changes like this (they are on devel branch)
 ggez = { git = "https://github.com/barsoosayque/ggez.git" }
-# using euclid with patch which implements default trait for angles
-# see: https://github.com/servo/euclid/pull/436
-euclid  = { git = "https://github.com/barsoosayque/euclid.git" }
 
 [build-dependencies]
 anyhow = "1.0.31"
