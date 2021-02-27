@@ -1,5 +1,6 @@
-use super::Config;
 use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
+use crate::config::Config;
 
 mod game;
 mod main_menu;
@@ -26,7 +27,10 @@ impl Plugin for StatePlugin {
 
         app.add_resource(state)
             .add_stage_after(bevy::prelude::stage::UPDATE, stage::APP_STATE, StateStage::<State>::default())
-            .add_plugin(game::GamePlugin)
-            .add_plugin(main_menu::MainMenuPlugin);
+            .add_plugin(EguiPlugin)
+            // Main menu
+            .on_state_update(stage::APP_STATE, State::MainMenu, main_menu::ui_system.system())
+            // Game
+            .on_state_enter(stage::APP_STATE, State::Game, game::setup.system());
     }
 }
