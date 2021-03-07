@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use crate::config::Config;
 
 mod game;
+mod loading;
 mod main_menu;
 
 mod stage {
@@ -13,6 +13,7 @@ pub type States = bevy::ecs::State<State>;
 
 #[derive(Clone)]
 pub enum State {
+    InitialLoading,
     MainMenu,
     Game,
 }
@@ -20,15 +21,13 @@ pub enum State {
 pub struct StatePlugin;
 impl Plugin for StatePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        let state = {
-            let config = app.resources().get::<Config>().unwrap();
-            bevy::ecs::State::new(if config.skip_menu { State::Game } else { State::MainMenu })
-        };
-
-        app.add_resource(state)
+        app.add_plugin(EguiPlugin)
+            .add_resource(bevy::ecs::State::new(State::InitialLoading))
             .add_stage_after(bevy::prelude::stage::UPDATE, stage::APP_STATE, StateStage::<State>::default())
-            .add_plugin(EguiPlugin)
-            // Main menu
+            // Initial Loading
+            .on_state_update(stage::APP_STATE, State::InitialLoading, loading::ui_system.system())
+            .on_state_update(stage::APP_STATE, State::InitialLoading, loading::assets_watcher_system.system())
+            // Main Menu
             .on_state_update(stage::APP_STATE, State::MainMenu, main_menu::ui_system.system())
             // Game
             .on_state_enter(stage::APP_STATE, State::Game, game::setup.system());
