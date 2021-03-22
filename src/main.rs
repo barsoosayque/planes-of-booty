@@ -1,17 +1,19 @@
 mod config;
+mod object;
 mod render;
 mod state;
 mod utils;
-mod object;
+mod scripting;
 
 use bevy::{
     log::{Level, LogSettings},
     prelude::*,
 };
 use bevy_fallible::FallibleSystemPlugin;
-use state::StatePlugin;
-use render::RenderPlugin;
 use object::ObjectPlugin;
+use render::RenderPlugin;
+use state::StatePlugin;
+use scripting::ScriptingPlugin;
 
 pub use config::Config;
 
@@ -34,6 +36,7 @@ fn main() {
         })
         .add_resource(ClearColor(Color::rgb(0.08, 0.04, 0.1)))
         .add_plugins(DefaultPlugins)
+        .add_plugin(ScriptingPlugin)
         .add_plugin(ObjectPlugin)
         .add_plugin(RenderPlugin)
         .add_plugin(StatePlugin)
