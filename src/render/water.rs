@@ -28,36 +28,39 @@ pub struct WaterRenderPipeline {
 }
 
 pub fn setup_pipeline(
-    commands: &mut Commands,
+    mut commands: Commands,
     asset_server: ResMut<AssetServer>,
     mut pipelines: ResMut<Assets<PipelineDescriptor>>,
     mut render_graph: ResMut<RenderGraph>,
 ) {
     build_type!(dev: asset_server.watch_for_changes().unwrap());
 
+    let mut descriptor = PipelineDescriptor::default_config(ShaderStages {
+        vertex: asset_server.load("shaders/water.vert"),
+        fragment: Some(asset_server.load("shaders/water.frag")),
+    });
+    descriptor.name = Some("water-pipeline".to_owned());
+
     commands.insert_resource(WaterRenderPipeline {
-        descriptor: pipelines.add(PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader, _>("shaders/water.vert"),
-            fragment: Some(asset_server.load::<Shader, _>("shaders/water.frag")),
-        })),
-        default_texture: asset_server.load::<Texture, _>("textures/water.png"),
+        descriptor: pipelines.add(descriptor),
+        default_texture: asset_server.load("textures/water.png"),
     });
 
-    let node = render_graph.add_system_node("water_material", AssetRenderResourcesNode::<WaterMaterial>::new(true));
+    let node = render_graph
+        .add_system_node("water_material", AssetRenderResourcesNode::<WaterMaterial>::new(true));
     render_graph.add_node_edge(node, MAIN_PASS).unwrap();
 }
 
 pub fn finalize_pipeline_system(
-    mut state: Local<EventReader<AssetEvent<Texture>>>,
+    mut events: EventReader<AssetEvent<Texture>>,
     pipeline: Res<WaterRenderPipeline>,
     mut textures: ResMut<Assets<Texture>>,
     mut status: ResMut<PipelineStatus>,
-    texture_events: Res<Events<AssetEvent<Texture>>>,
 ) {
-    for event in state.iter(&texture_events) {
+    for event in events.iter() {
         match event {
-            AssetEvent::Created { handle } if handle == &pipeline.default_texture => {
-                let mut texture = textures.get_mut(handle.clone_weak()).unwrap();
+            AssetEvent::Created { handle } if pipeline.default_texture.id == handle.id => {
+                let mut texture = textures.get_mut(handle).unwrap();
                 texture.sampler.address_mode_u = AddressMode::Repeat;
                 texture.sampler.address_mode_v = AddressMode::Repeat;
                 texture.sampler.address_mode_w = AddressMode::Repeat;

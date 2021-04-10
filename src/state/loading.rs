@@ -5,8 +5,21 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use egui::CentralPanel;
 
-pub fn ui_system(mut egui: ResMut<EguiContext>) {
-    let ctx = &mut egui.ctx;
+pub struct LoadingStatePlugin;
+
+impl Plugin for LoadingStatePlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app
+            .add_system_set(
+                SystemSet::on_update(State::InitialLoading)
+                    .with_system(ui_system.system())
+                    .with_system(assets_watcher_system.system()),
+            );
+    }
+}
+
+fn ui_system(egui: ResMut<EguiContext>) {
+    let ctx = egui.ctx();
 
     CentralPanel::default().show(ctx, |ui| {
         ui.vertical_centered(|ui| {
@@ -15,7 +28,11 @@ pub fn ui_system(mut egui: ResMut<EguiContext>) {
     });
 }
 
-pub fn assets_watcher_system(config: Res<Config>, pipeline_status: Res<PipelineStatus>, mut states: ResMut<States>) {
+fn assets_watcher_system(
+    config: Res<Config>,
+    pipeline_status: Res<PipelineStatus>,
+    mut states: ResMut<States>,
+) {
     if pipeline_status.is_ready() {
         let state = {
             if config.skip_menu {
@@ -25,6 +42,7 @@ pub fn assets_watcher_system(config: Res<Config>, pipeline_status: Res<PipelineS
             }
         };
 
-        states.set_next(state).unwrap();
+        states.set(state).unwrap();
+        info!("Everything is loaded.")
     }
 }

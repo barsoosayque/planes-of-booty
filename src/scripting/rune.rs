@@ -4,6 +4,8 @@ use rune::{Diagnostics, EmitDiagnostics, Options, Sources};
 use runestick::{Context, Hash, Module, Source, Vm};
 use std::{ops::DerefMut, sync::Arc};
 
+use super::object_module;
+
 lazy_static! {
     static ref MAIN_HASH: Hash = Hash::type_hash(&["main"]);
 }
@@ -19,11 +21,15 @@ pub struct RuneContext {
 
 impl RuneContext {
     pub fn new() -> Self {
-        let mut ctx = Context::default();
-        let mut module = Module::default();
+        let mut ctx = Context::with_config(false).unwrap();
+        let mut module = Module::new();
+
+        // TODO: [BHVR] tracing target = script name
         module.function(&["debug"], |s: String| debug!("{}", &s)).unwrap();
         module.function(&["info"], |s: String| info!("{}", &s)).unwrap();
         ctx.install(&module).unwrap();
+        
+        ctx.install(&object_module::module()).unwrap();
 
         Self { ctx, queue: vec![] }
     }

@@ -5,13 +5,9 @@ mod game;
 mod loading;
 mod main_menu;
 
-mod stage {
-    pub const APP_STATE: &'static str = "app-state";
-}
+pub type States = bevy::ecs::schedule::State<self::State>;
 
-pub type States = bevy::ecs::State<State>;
-
-#[derive(Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum State {
     InitialLoading,
     MainMenu,
@@ -21,15 +17,11 @@ pub enum State {
 pub struct StatePlugin;
 impl Plugin for StatePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_plugin(EguiPlugin)
-            .add_resource(bevy::ecs::State::new(State::InitialLoading))
-            .add_stage_after(bevy::prelude::stage::UPDATE, stage::APP_STATE, StateStage::<State>::default())
-            // Initial Loading
-            .on_state_update(stage::APP_STATE, State::InitialLoading, loading::ui_system.system())
-            .on_state_update(stage::APP_STATE, State::InitialLoading, loading::assets_watcher_system.system())
-            // Main Menu
-            .on_state_update(stage::APP_STATE, State::MainMenu, main_menu::ui_system.system())
-            // Game
-            .on_state_enter(stage::APP_STATE, State::Game, game::setup.system());
+        app
+        .add_plugin(EguiPlugin)
+        .add_plugin(loading::LoadingStatePlugin)
+        .add_plugin(game::GameStatePlugin)
+        .add_plugin(main_menu::MainMenuStatePlugin)
+        .add_state(State::InitialLoading);
     }
 }

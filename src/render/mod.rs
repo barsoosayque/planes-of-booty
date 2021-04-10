@@ -1,11 +1,13 @@
 mod water;
 
-use bevy::{ecs::ShouldRun, prelude::*};
+use bevy::{ecs::schedule::ShouldRun, prelude::*};
 pub use water::{WaterMaterial, WaterRenderPipeline};
 
 mod stage {
     pub const FINALIZE_PIPELINE: &'static str = "finalize-pipeline";
 }
+
+// TODO: [ERGO] rewrite to ShouldRun chain
 #[derive(Default)]
 pub struct PipelineStatus {
     pub is_water_ready: bool,
@@ -26,14 +28,22 @@ fn run_finalizers_if_not_ready(status: Res<PipelineStatus>) -> ShouldRun {
 pub struct RenderPlugin;
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        let stage = SystemStage::parallel()
-            .with_system(water::finalize_pipeline_system.system())
-            .with_run_criteria(run_finalizers_if_not_ready.system());
-
         app.init_resource::<PipelineStatus>()
+            // water
             .add_asset::<WaterMaterial>()
             .add_startup_system(water::setup_pipeline.system())
-            .add_stage_before(bevy::prelude::stage::PRE_UPDATE, stage::FINALIZE_PIPELINE, stage)
-            .add_system(water::update_water_material_system.system());
+            .add_system(water::update_water_material_system.system())
+            // finalization
+            .add_stage_before(
+                bevy::app::CoreStage::PreUpdate,
+                stage::FINALIZE_PIPELINE,
+                SystemStage::parallel(),
+            )
+            .add_system_set_to_stage(
+                stage::FINALIZE_PIPELINE,
+                SystemSet::new()
+                    .with_system(water::finalize_pipeline_system.system())
+                    .with_run_criteria(run_finalizers_if_not_ready.system()),
+            );
     }
 }
